@@ -1,0 +1,32 @@
+{
+  "name": "tubes-capstone2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon app.js",
+    "start": "node app.js",
+    "migrate": "npx knex migrate:latest",
+    "migrate:rollback": "npx knex migrate:rollback",
+    "migrate:fresh": "npx knex migrate:rollback --all && npx knex migrate:latest",
+    "seed": "npx knex seed:run",
+    "db:reset": "npx knex migrate:rollback --all && npx knex migrate:latest && npx knex seed:run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "knex": "^3.2.10",
+    "mysql2": "^3.22.3",
+    "pug": "^3.0.4",
+    "sequelize": "^6.37.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

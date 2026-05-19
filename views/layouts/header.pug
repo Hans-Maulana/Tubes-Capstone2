@@ -1,0 +1,46 @@
+header.app-header
+  //- Gunakan d-flex dan justify-content-between untuk memisahkan toggle kiri dan profil kanan
+  nav.navbar.navbar-expand-lg.navbar-light.w-100.d-flex.align-items-center.justify-content-between.p-0
+  
+    //- Bagian Kiri (Menu Toggle Mobile)
+    ul.navbar-nav
+      li.nav-item.d-block.d-xl-none
+        a#headerCollapse.nav-link.sidebartoggler(href="javascript:void(0)")
+          i.ti.ti-menu-2
+          
+    //- Bagian Kanan (Profil & Notifikasi menggunakan d-flex dan susunan horizontal)
+    .navbar-collapse.justify-content-end.px-0#navbarNav
+      ul.navbar-nav.flex-row.ms-auto.align-items-center.justify-content-end.d-flex.gap-3
+      
+        //- 1. Nama Pengguna (Kiri dari Tombol Notifikasi)
+        if user
+          li.nav-item.d-none.d-md-flex.flex-column.text-end
+            span.fw-semibold.text-dark= user.name
+            span.text-muted.small(style="font-size: 11px;")= user.role
+
+        //- 2. Tombol Notifikasi (Kanan dari Nama Pengguna)
+        li.nav-item.dropdown
+          a#drop1.nav-link.nav-icon-hover(href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false")
+            i.ti.ti-bell.fs-6
+            .notification.bg-primary.rounded-circle
+          .dropdown-menu.dropdown-menu-end.dropdown-menu-animate-up(aria-labelledby="drop1")
+            .message-body
+              p.text-center.py-2.mb-0.text-muted Tidak ada notifikasi baru
+            
+        //- 3. (Opsional/Tambahan) Foto Profil & Dropdown Logout
+        li.nav-item.dropdown
+          a#drop2.nav-link.nav-icon-hover(href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false")
+            img.rounded-circle(src="/assets/images/profile/user-1.jpg" alt="Profile" width="35" height="35")
+          .dropdown-menu.dropdown-menu-end.dropdown-menu-animate-up(aria-labelledby="drop2")
+            .message-body
+              if user
+                .px-3.py-2.border-bottom.mb-2
+                  span.d-block.fw-bold= user.name
+                  span.d-block.text-muted.small(style="font-size: 11px;")= user.email
+              a.d-flex.align-items-center.gap-2.dropdown-item(href="javascript:void(0)")
+                i.ti.ti-user.fs-6
+                p.mb-0.fs-3 Profil Saya
+              a.d-flex.align-items-center.gap-2.dropdown-item(href="javascript:void(0)")
+                i.ti.ti-settings.fs-6
+                p.mb-0.fs-3 Pengaturan
+              a.btn.btn-outline-primary.mx-3.mt-2.d-block(href="/auth/logout") Keluar (Logout)

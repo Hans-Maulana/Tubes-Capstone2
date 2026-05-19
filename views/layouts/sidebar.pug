@@ -1,0 +1,84 @@
+aside.left-sidebar
+  //- Sidebar scroll
+  div
+    .brand-logo.d-flex.align-items-center.justify-content-between
+      a.text-nowrap.logo-img(href="/dashboard" style="text-decoration: none;")
+        .d-flex.align-items-center.gap-2.py-2
+          i.ti.ti-box.fs-8.text-primary
+          h4.fw-bold.mb-0.text-dark INVENTARIS LAB
+      #sidebarCollapse.close-btn.d-xl-none.d-block.sidebartoggler.cursor-pointer
+        i.ti.ti-x.fs-6
+
+    //- Sidebar navigation
+    nav.sidebar-nav.scroll-sidebar(data-simplebar="")
+      ul#sidebarnav
+        li.nav-small-cap
+          iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
+          span.hide-menu Utama
+        
+        li.sidebar-item
+          a.sidebar-link(href="/dashboard" aria-expanded="false")
+            i.ti.ti-layout-dashboard
+            span.hide-menu Dashboard
+
+        li.nav-small-cap
+          iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
+          span.hide-menu Inventaris
+          
+        li.sidebar-item
+          a.sidebar-link(href="/inventories" aria-expanded="false")
+            i.ti.ti-package
+            span.hide-menu Daftar Barang
+            
+        li.sidebar-item
+          a.sidebar-link(href="/bhps" aria-expanded="false")
+            i.ti.ti-archive
+            span.hide-menu Barang Habis Pakai
+            
+        li.sidebar-item
+          a.sidebar-link(href="/rooms" aria-expanded="false")
+            i.ti.ti-door
+            span.hide-menu Ruangan Lab
+
+        li.nav-small-cap
+          iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
+          span.hide-menu Pengadaan & Penerimaan
+          
+        li.sidebar-item
+          a.sidebar-link(href="/procurement-drafts" aria-expanded="false")
+            i.ti.ti-file-description
+            span.hide-menu Draf Pengadaan
+            
+        li.sidebar-item
+          a.sidebar-link(href="/procurement-receipts" aria-expanded="false")
+            i.ti.ti-receipt
+            span.hide-menu Log Penerimaan
+
+        li.nav-small-cap
+          iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
+          span.hide-menu Perawatan
+          
+        li.sidebar-item
+          a.sidebar-link(href="/maintenance-logs" aria-expanded="false")
+            i.ti.ti-tool
+            span.hide-menu Log Pemeliharaan
+            
+        li.sidebar-item
+          a.sidebar-link(href="/inventory-replacements" aria-expanded="false")
+            i.ti.ti-replace
+            span.hide-menu Log Penggantian
+
+        if user && (user.role === 'Administrator' || user.role === 'Kepala Laboratorium')
+          li.nav-small-cap
+            iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
+            span.hide-menu Administrasi
+            
+          li.sidebar-item
+            a.sidebar-link(href="/users" aria-expanded="false")
+              i.ti.ti-users
+              span.hide-menu Daftar Pengguna
+              
+          li.sidebar-item
+            a.sidebar-link(href="/roles" aria-expanded="false")
+              i.ti.ti-shield
+              span.hide-menu Pengaturan Peran

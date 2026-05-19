@@ -1,0 +1,67 @@
+extends layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-info.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Boilerplate Capstone II (Express & Knex.js MVC)
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Halaman Landing / Status
+            .col-3
+              .text-center.mb-n5
+                i.ti.ti-atom.fs-10.text-info
+
+  .row
+    //- Card 1: Express Server Status
+    .col-md-6.d-flex.align-items-stretch
+      .card.w-100
+        .card-body
+          h5.card-title.fw-semibold Status Server Aplikasi
+          p.card-subtitle.mb-4 Status runtime web server lokal saat ini.
+          
+          .d-flex.align-items-center.gap-3.mb-3
+            .p-2.bg-light-success.rounded-circle.d-inline-flex
+              i.ti.ti-circle-check.fs-6.text-success
+            div
+              h6.fw-bold.mb-0 Express Server Online
+              span.text-muted.small Port Aktif: 3000
+              
+          .d-flex.align-items-center.gap-3.mb-3
+            if dbStatus && dbStatus.connected
+              .p-2.bg-light-success.rounded-circle.d-inline-flex
+                i.ti.ti-database.fs-6.text-success
+              div
+                h6.fw-bold.mb-0 Koneksi Database Sukses
+                span.text-muted.small= dbStatus.message
+            else
+              .p-2.bg-light-danger.rounded-circle.d-inline-flex
+                i.ti.ti-alert-circle.fs-6.text-danger
+              div
+                h6.fw-bold.mb-0 Koneksi Database Gagal
+                span.text-muted.small.text-danger= dbStatus ? dbStatus.message : 'Database terputus'
+                
+          .mt-4
+            a.btn.btn-primary.w-100(href="/dashboard")
+              i.ti.ti-shield-lock.me-2
+              | Masuk ke Dashboard Area
+
+    //- Card 2: Folder Structure
+    .col-md-6.d-flex.align-items-stretch
+      .card.w-100
+        .card-body
+          h5.card-title.fw-semibold Arsitektur MVC Project
+          p.card-subtitle.mb-4 Penjelasan modul boilerplate yang sedang berjalan.
+          
+          .list-group.list-group-flush
+            if projectStructure && projectStructure.length > 0
+              each item in projectStructure
+                .list-group-item.px-0.py-2
+                  h6.fw-semibold.mb-1= item.name
+                  p.text-muted.small.mb-0= item.desc
+            else
+              .list-group-item.px-0.py-2
+                span.text-muted Struktur folder kosong atau tidak diumpankan.

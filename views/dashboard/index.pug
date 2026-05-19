@@ -1,0 +1,117 @@
+extends ../layouts/master.pug
+
+block content
+  //- Welcome banner
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Selamat Datang di Sistem Inventaris Laboratorium, #{user ? user.name : 'User'}!
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Dashboard Utama
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  //- Statistics Cards Row
+  .row
+    .col-sm-6.col-xl-3
+      .card.bg-light-primary.shadow-none
+        .card-body.p-4
+          .d-flex.align-items-center
+            .bg-primary.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+              i.ti.ti-package.fs-6
+            .ms-3
+              h6.mb-0.text-muted.small Total Inventaris
+              h4.fw-semibold.mb-0= stats ? stats.totalInventories : 0
+              
+    .col-sm-6.col-xl-3
+      .card.bg-light-warning.shadow-none
+        .card-body.p-4
+          .d-flex.align-items-center
+            .bg-warning.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+              i.ti.ti-archive.fs-6
+            .ms-3
+              h6.mb-0.text-muted.small Barang Habis Pakai
+              h4.fw-semibold.mb-0= stats ? stats.totalBhps : 0
+              
+    .col-sm-6.col-xl-3
+      .card.bg-light-success.shadow-none
+        .card-body.p-4
+          .d-flex.align-items-center
+            .bg-success.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+              i.ti.ti-door.fs-6
+            .ms-3
+              h6.mb-0.text-muted.small Ruangan Lab
+              h4.fw-semibold.mb-0= stats ? stats.totalRooms : 0
+              
+    .col-sm-6.col-xl-3
+      .card.bg-light-danger.shadow-none
+        .card-body.p-4
+          .d-flex.align-items-center
+            .bg-danger.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+              i.ti.ti-tool.fs-6
+            .ms-3
+              h6.mb-0.text-muted.small Log Pemeliharaan
+              h4.fw-semibold.mb-0= stats ? stats.totalLogs : 0
+
+  //- Recent Activities & Quick Actions
+  .row.mt-4
+    .col-lg-8.d-flex.align-items-stretch
+      .card.w-100
+        .card-body
+          .d-flex.align-items-center.justify-content-between.mb-9
+            .mb-3
+              h5.card-title.fw-semibold Inventaris Terbaru
+              p.card-subtitle.mb-0 Barang yang baru saja dicatat dalam sistem.
+            a.btn.btn-sm.btn-primary(href="/inventories") Lihat Semua
+          .table-responsive.mt-4
+            table.table.align-middle.text-nowrap.mb-0
+              thead.text-dark.fs-4
+                tr
+                  th.border-bottom-0 Nomor Label
+                  th.border-bottom-0 Nama Barang
+                  th.border-bottom-0 Kategori
+                  th.border-bottom-0 Ruangan
+                  th.border-bottom-0 Kondisi
+              tbody
+                if recentInventories && recentInventories.length > 0
+                  each item in recentInventories
+                    tr
+                      td.border-bottom-0
+                        span.fw-semibold= item.label_number
+                      td.border-bottom-0
+                        h6.fw-semibold.mb-1= item.name
+                      td.border-bottom-0
+                        p.mb-0.fw-normal= item.category
+                      td.border-bottom-0
+                        span.badge.bg-light-secondary.text-secondary= item.room_name || 'Tidak Ada'
+                      td.border-bottom-0
+                        if item.condition === 'Baik'
+                          span.badge.bg-success.rounded-3.fw-semibold Baik
+                        else if item.condition === 'Maintenance'
+                          span.badge.bg-warning.rounded-3.fw-semibold Maintenance
+                        else
+                          span.badge.bg-danger.rounded-3.fw-semibold Rusak
+                else
+                  tr
+                    td.text-center.py-4(colspan="5") Belum ada data inventaris.
+
+    .col-lg-4.d-flex.align-items-stretch
+      .card.w-100
+        .card-body
+          h5.card-title.fw-semibold Tindakan Cepat
+          p.card-subtitle Akses cepat ke modul transaksi laboratorium.
+          .d-grid.gap-2.mt-4
+            a.btn.btn-outline-primary.d-flex.align-items-center.gap-2.py-3.px-4(href="/inventories")
+              i.ti.ti-plus.fs-5
+              | Tambah Inventaris
+            a.btn.btn-outline-success.d-flex.align-items-center.gap-2.py-3.px-4(href="/procurement-drafts")
+              i.ti.ti-file-plus.fs-5
+              | Buat Usulan Pengadaan
+            a.btn.btn-outline-warning.d-flex.align-items-center.gap-2.py-3.px-4(href="/maintenance-logs")
+              i.ti.ti-tool.fs-5
+              | Catat Pemeliharaan
