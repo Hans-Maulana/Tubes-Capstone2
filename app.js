@@ -55,7 +55,7 @@ app.use('/', routes);
 
 // 404 Route Handler
 app.use((req, res, next) => {
-  const err = new Error('Page Not Found');
+  const err = new Error(`Page Not Found: ${req.originalUrl}`);
   err.status = 404;
   next(err);
 });
@@ -65,7 +65,7 @@ app.use((err, req, res, next) => {
   console.error('[Global Error Handler] Error captured:', err.message);
   
   if (err.status === 403 || err.status === 401) {
-    return res.status(err.status).render('unauthorized', {
+    return res.status(err.status).render('auth/unauthorized', {
       title: `${err.status} Access Denied - Tubes Capstone II`,
       message: err.message
     });

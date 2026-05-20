@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="100%" height="100%">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5d87ff;stop-opacity:0.25" />
+      <stop offset="100%" style="stop-color:#a855f7;stop-opacity:0.08" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="120" fill="url(#grad1)" rx="15"/>
+  
+  <!-- Modern Geometric Ornaments -->
+  <circle cx="165" cy="85" r="45" fill="#5d87ff" opacity="0.15"/>
+  <circle cx="185" cy="25" r="30" fill="#a855f7" opacity="0.1"/>
+  <circle cx="20" cy="20" r="15" fill="#5d87ff" opacity="0.08"/>
+  
+  <!-- Subtle Abstract Grid -->
+  <path d="M 140,80 L 180,40 M 150,90 L 190,50" stroke="#5d87ff" stroke-width="1.5" stroke-linecap="round" opacity="0.2" />
+  
+  <!-- Abstract Lab Beaker / Box Vector Shape -->
+  <g transform="translate(145, 65) scale(0.6)" opacity="0.45">
+    <path d="M10 35 L10 10 L30 10 L30 35 L40 35 L40 40 L0 40 L0 35 Z" fill="#5d87ff"/>
+    <rect x="8" y="15" width="24" height="20" rx="2" fill="#ffffff" opacity="0.7"/>
+  </g>
+</svg>

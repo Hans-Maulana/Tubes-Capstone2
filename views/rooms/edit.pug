@@ -1,0 +1,49 @@
+extends ../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Ubah Data Ruangan
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/rooms") Ruangan Lab
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Ubah
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-md-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Formulir Ubah Ruangan
+          form(action=`/rooms/edit/${roomToEdit.id}` method="POST")
+            .mb-3
+              label.form-label(for="name") Nama Ruangan
+              input#name.form-control(type="text" name="name" placeholder="Masukkan nama ruangan" required value=roomToEdit.name)
+            
+            .mb-3
+              label.form-label(for="location") Lokasi / Gedung
+              input#location.form-control(type="text" name="location" placeholder="Masukkan lokasi ruangan" value=roomToEdit.location)
+            
+            .mb-4
+              label.form-label(for="description") Deskripsi / Keterangan
+              textarea#description.form-control(name="description" rows="4" placeholder="Masukkan deskripsi detail mengenai ruangan laboratorium")= roomToEdit.description
+            
+            .d-flex.align-items-center.gap-2.mt-4
+              button.btn.btn-warning.text-white(type="submit") Perbarui Ruangan
+              a.btn.btn-outline-secondary(href="/rooms") Kembali

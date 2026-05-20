@@ -1,0 +1,58 @@
+extends ../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Ubah Data Pengguna
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/users") Daftar Pengguna
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Ubah
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-md-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Formulir Ubah Pengguna
+          form(action=`/users/edit/${userToEdit.id}` method="POST")
+            .mb-3
+              label.form-label(for="name") Nama Lengkap
+              input#name.form-control(type="text" name="name" placeholder="Masukkan nama lengkap" required value=userToEdit.name)
+            
+            .mb-3
+              label.form-label(for="email") Alamat Email
+              input#email.form-control(type="email" name="email" placeholder="contoh@domain.com" required value=userToEdit.email)
+            
+            .mb-3
+              label.form-label(for="password") Kata Sandi (Password)
+              input#password.form-control(type="password" name="password" placeholder="Biarkan kosong jika tidak ingin mengubah kata sandi")
+              .form-text.text-muted Masukkan kata sandi baru jika ingin menggantinya.
+            
+            .mb-4
+              label.form-label(for="role_id") Peran (Role)
+              select#role_id.form-select(name="role_id" required)
+                option(value="" disabled) -- Pilih Peran Pengguna --
+                if roles && roles.length > 0
+                  each role in roles
+                    option(value=role.id selected=(userToEdit.role_id == role.id))= role.name
+            
+            .d-flex.align-items-center.gap-2.mt-4
+              button.btn.btn-warning.text-white(type="submit") Perbarui Pengguna
+              a.btn.btn-outline-secondary(href="/users") Kembali
