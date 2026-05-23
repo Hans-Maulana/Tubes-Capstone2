@@ -2,21 +2,9 @@ const express = require('express');
 const path = require('path');
 const dotenv = require('dotenv');
 const session = require('express-session');
-const sequelize = require('./models/db');
+const { sequelize } = require('./models');
 const routes = require('./routes/index');
 const authRoutes = require('./routes/auth');
-
-// Import semua model agar sequelize.sync() mengenali semua tabel
-require('./models/Role');
-require('./models/User');
-require('./models/Room');
-require('./models/Inventory');
-require('./models/Bhp');
-require('./models/ProcurementDraft');
-require('./models/ProcurementItem');
-require('./models/ProcurementReceipt');
-require('./models/MaintenanceLog');
-require('./models/InventoryReplacement');
 
 // Load environment variables
 dotenv.config();

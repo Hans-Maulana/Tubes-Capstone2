@@ -1,0 +1,153 @@
+extends ../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8= `Draf Pengadaan ${draft.year}`
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/procurement-drafts") Draf Pengadaan
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Detail
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if success
+    .alert.alert-success.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-check-circle.me-2
+      strong Sukses! 
+      = success
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-4
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-3 Ringkasan Draf
+          .mb-3
+            p.mb-1.text-muted Tahun
+            h6.fw-semibold.mb-0= draft.year
+          .mb-3
+            p.mb-1.text-muted Status
+            if draft.status === 'Locked'
+              span.badge.bg-dark.rounded-3.fw-semibold Locked
+            else if draft.status === 'Submitted'
+              span.badge.bg-info.rounded-3.fw-semibold Submitted
+            else
+              span.badge.bg-warning.rounded-3.fw-semibold= draft.status
+          .mb-3
+            p.mb-1.text-muted Jumlah Item
+            h6.fw-semibold.mb-0= draft.items ? draft.items.length : 0
+          if locked
+            .alert.alert-secondary.mb-0
+              i.ti.ti-lock.me-1
+              | Draf terkunci dan tidak dapat diubah.
+          else
+            .d-flex.flex-column.gap-2
+              form(action=`/procurement-drafts/${draft.id}/submit` method="POST")
+                button.btn.btn-outline-primary.w-100(type="submit")
+                  i.ti.ti-send.me-1
+                  | Ajukan Draf
+              form(action=`/procurement-drafts/${draft.id}/lock` method="POST" onsubmit="return confirm('Kunci draf ini? Setelah terkunci, data tidak dapat diubah.')")
+                button.btn.btn-dark.w-100(type="submit")
+                  i.ti.ti-lock.me-1
+                  | Kunci Draf
+
+    .col-lg-8
+      if !locked
+        .card
+          .card-body
+            h5.card-title.fw-semibold.mb-4 Tambah Item Pengadaan
+            form(action=`/procurement-drafts/${draft.id}/items` method="POST")
+              .row
+                .col-md-6.mb-3
+                  label.form-label(for="item_type") Jenis Barang
+                  select#item_type.form-select(name="item_type" required)
+                    option(value="" disabled selected) -- Pilih Jenis --
+                    option(value="Inventaris") Inventaris
+                    option(value="BHP") Barang Habis Pakai
+                .col-md-6.mb-3
+                  label.form-label(for="item_name") Nama Barang
+                  input#item_name.form-control(type="text" name="item_name" placeholder="Contoh: Oscilloscope / Kabel jumper" required)
+                .col-md-6.mb-3
+                  label.form-label(for="quantity") Jumlah
+                  input#quantity.form-control(type="number" name="quantity" min="1" required)
+                .col-md-6.mb-3
+                  label.form-label(for="price") Harga Satuan
+                  input#price.form-control(type="number" name="price" min="0" required)
+                .col-12.mb-3
+                  label.form-label(for="purchase_link") Link Pembelian
+                  input#purchase_link.form-control(type="url" name="purchase_link" placeholder="https://...")
+                .col-12.mb-4
+                  label.form-label(for="replacement_inventory_id") Pengganti Inventaris Rusak / Maintenance
+                  select#replacement_inventory_id.form-select(name="replacement_inventory_id")
+                    option(value="") Tidak mengganti inventaris lama
+                    if damagedInventories && damagedInventories.length > 0
+                      each inventory in damagedInventories
+                        option(value=inventory.id)= `${inventory.label_number || '-'} - ${inventory.name} (${inventory.condition})`
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-plus.me-1
+                | Tambah Item
+
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Daftar Item Pengadaan
+          .table-responsive
+            table.table.align-middle.text-nowrap.mb-0
+              thead.text-dark.fs-4
+                tr
+                  th.border-bottom-0.fw-semibold No
+                  th.border-bottom-0.fw-semibold Jenis
+                  th.border-bottom-0.fw-semibold Nama Barang
+                  th.border-bottom-0.fw-semibold Jumlah
+                  th.border-bottom-0.fw-semibold Harga
+                  th.border-bottom-0.fw-semibold Link
+                  th.border-bottom-0.fw-semibold Pengganti
+                  if !locked
+                    th.border-bottom-0.fw-semibold.text-center Aksi
+              tbody
+                if draft.items && draft.items.length > 0
+                  each item, index in draft.items
+                    tr
+                      td.border-bottom-0= index + 1
+                      td.border-bottom-0
+                        span.badge.bg-light-primary.text-primary.fw-semibold= item.item_type || '-'
+                      td.border-bottom-0
+                        h6.fw-semibold.mb-0= item.item_name || '-'
+                      td.border-bottom-0= item.quantity || 0
+                      td.border-bottom-0= `Rp ${Number(item.price || 0).toLocaleString('id-ID')}`
+                      td.border-bottom-0
+                        if item.purchase_link
+                          a.btn.btn-sm.btn-outline-primary(href=item.purchase_link target="_blank" rel="noopener noreferrer")
+                            i.ti.ti-external-link
+                        else
+                          span.text-muted -
+                      td.border-bottom-0
+                        if item.replacementInventory
+                          span.text-wrap.d-inline-block(style="max-width: 220px;")= item.replacementInventory.name
+                        else
+                          span.text-muted -
+                      if !locked
+                        td.border-bottom-0.text-center
+                          .d-flex.justify-content-center.gap-2
+                            a.btn.btn-sm.btn-outline-warning(href=`/procurement-drafts/${draft.id}/items/${item.id}/edit`)
+                              i.ti.ti-edit
+                            form(action=`/procurement-drafts/${draft.id}/items/${item.id}/delete` method="POST" onsubmit="return confirm('Hapus item ini dari draf?')")
+                              button.btn.btn-sm.btn-outline-danger(type="submit")
+                                i.ti.ti-trash
+                else
+                  tr
+                    td.text-center.py-4(colspan=(locked ? 7 : 8)) Belum ada item pengadaan.

@@ -6,11 +6,10 @@
   "scripts": {
     "dev": "nodemon app.js",
     "start": "node app.js",
-    "migrate": "npx knex migrate:latest",
-    "migrate:rollback": "npx knex migrate:rollback",
-    "migrate:fresh": "npx knex migrate:rollback --all && npx knex migrate:latest",
-    "seed": "npx knex seed:run",
-    "db:reset": "npx knex migrate:rollback --all && npx knex migrate:latest && npx knex seed:run"
+    "db:sync": "node database/sync.js --alter",
+    "db:fresh": "node database/sync.js --force",
+    "seed": "node database/seed.js",
+    "db:reset": "npm run db:fresh && npm run seed"
   },
   "keywords": [],
   "author": "",
@@ -21,7 +20,6 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
-    "knex": "^3.2.10",
     "mysql2": "^3.22.3",
     "pug": "^3.0.4",
     "sequelize": "^6.37.8"

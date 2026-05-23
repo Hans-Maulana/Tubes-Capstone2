@@ -1,0 +1,77 @@
+extends ../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Draf Pengadaan
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Draf Pengadaan
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if success
+    .alert.alert-success.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-check-circle.me-2
+      strong Sukses! 
+      = success
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-12
+      .card.w-100
+        .card-body
+          .d-flex.align-items-center.justify-content-between.mb-4
+            div
+              h5.card-title.fw-semibold.mb-0 Draf Tahunan
+              p.card-subtitle.mb-0 Data pengadaan inventaris dan BHP yang disusun oleh Kepala Laboratorium.
+            a.btn.btn-primary.d-flex.align-items-center.gap-2(href="/procurement-drafts/create")
+              i.ti.ti-file-plus.fs-5
+              | Buat Draf
+
+          .table-responsive.mt-4
+            table.table.align-middle.text-nowrap.mb-0
+              thead.text-dark.fs-4
+                tr
+                  th.border-bottom-0.fw-semibold No
+                  th.border-bottom-0.fw-semibold Tahun
+                  th.border-bottom-0.fw-semibold Status
+                  th.border-bottom-0.fw-semibold Jumlah Item
+                  th.border-bottom-0.fw-semibold Dibuat
+                  th.border-bottom-0.fw-semibold.text-center Aksi
+              tbody
+                if drafts && drafts.length > 0
+                  each draft, index in drafts
+                    tr
+                      td.border-bottom-0= index + 1
+                      td.border-bottom-0
+                        h6.fw-semibold.mb-0= draft.year
+                      td.border-bottom-0
+                        if draft.status === 'Locked'
+                          span.badge.bg-dark.rounded-3.fw-semibold Locked
+                        else if draft.status === 'Submitted'
+                          span.badge.bg-info.rounded-3.fw-semibold Submitted
+                        else
+                          span.badge.bg-warning.rounded-3.fw-semibold= draft.status
+                      td.border-bottom-0= draft.items ? draft.items.length : 0
+                      td.border-bottom-0= new Date(draft.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+                      td.border-bottom-0.text-center
+                        a.btn.btn-sm.btn-outline-primary.d-inline-flex.align-items-center.gap-1(href=`/procurement-drafts/${draft.id}`)
+                          i.ti.ti-eye
+                          | Detail
+                else
+                  tr
+                    td.text-center.py-4(colspan="6") Belum ada draf pengadaan.

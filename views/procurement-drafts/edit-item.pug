@@ -1,0 +1,68 @@
+extends ../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Ubah Item Pengadaan
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/procurement-drafts") Draf Pengadaan
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href=`/procurement-drafts/${draft.id}`)= `Draf ${draft.year}`
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Ubah Item
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Data Item Pengadaan
+          form(action=`/procurement-drafts/${draft.id}/items/${item.id}/edit` method="POST")
+            .row
+              .col-md-6.mb-3
+                label.form-label(for="item_type") Jenis Barang
+                select#item_type.form-select(name="item_type" required)
+                  option(value="" disabled selected=!item.item_type) -- Pilih Jenis --
+                  option(value="Inventaris" selected=(item.item_type === 'Inventaris')) Inventaris
+                  option(value="BHP" selected=(item.item_type === 'BHP')) Barang Habis Pakai
+              .col-md-6.mb-3
+                label.form-label(for="item_name") Nama Barang
+                input#item_name.form-control(type="text" name="item_name" required value=item.item_name)
+              .col-md-6.mb-3
+                label.form-label(for="quantity") Jumlah
+                input#quantity.form-control(type="number" name="quantity" min="1" required value=item.quantity)
+              .col-md-6.mb-3
+                label.form-label(for="price") Harga Satuan
+                input#price.form-control(type="number" name="price" min="0" required value=item.price)
+              .col-12.mb-3
+                label.form-label(for="purchase_link") Link Pembelian
+                input#purchase_link.form-control(type="url" name="purchase_link" placeholder="https://..." value=item.purchase_link || '')
+              .col-12.mb-4
+                label.form-label(for="replacement_inventory_id") Pengganti Inventaris Rusak / Maintenance
+                select#replacement_inventory_id.form-select(name="replacement_inventory_id")
+                  option(value="" selected=!item.replacement_inventory_id) Tidak mengganti inventaris lama
+                  if damagedInventories && damagedInventories.length > 0
+                    each inventory in damagedInventories
+                      option(value=inventory.id selected=(item.replacement_inventory_id == inventory.id))= `${inventory.label_number || '-'} - ${inventory.name} (${inventory.condition})`
+
+            .d-flex.align-items-center.gap-2
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-device-floppy.me-1
+                | Simpan Perubahan
+              a.btn.btn-outline-secondary(href=`/procurement-drafts/${draft.id}`) Kembali

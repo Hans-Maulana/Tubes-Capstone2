@@ -1,0 +1,43 @@
+extends ../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Buat Draf Pengadaan
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/procurement-drafts") Draf Pengadaan
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Buat
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-md-7
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Data Draf Tahunan
+          form(action="/procurement-drafts" method="POST")
+            .mb-4
+              label.form-label(for="year") Tahun Pengadaan
+              input#year.form-control(type="number" name="year" min="2000" max="2100" required value=(formData.year || currentYear))
+
+            .d-flex.align-items-center.gap-2
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-device-floppy.me-1
+                | Simpan Draf
+              a.btn.btn-outline-secondary(href="/procurement-drafts") Kembali

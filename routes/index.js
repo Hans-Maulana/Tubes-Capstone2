@@ -4,8 +4,10 @@ const homeController = require('../controllers/homeController');
 const dashboardController = require('../controllers/dashboardController');
 const userController = require('../controllers/userController');
 const roomController = require('../controllers/roomController');
+const procurementDraftController = require('../controllers/procurementDraftController');
 const authCheck = require('../middlewares/authCheck');
 const adminCheck = require('../middlewares/adminCheck');
+const roleCheck = require('../middlewares/roleCheck');
 
 // Define main/landing route
 // router.get('/', homeController.getHome);
@@ -31,5 +33,17 @@ router.post('/rooms', authCheck, adminCheck, roomController.postCreateRoom);
 router.get('/rooms/edit/:id', authCheck, adminCheck, roomController.getEditRoom);
 router.post('/rooms/edit/:id', authCheck, adminCheck, roomController.postUpdateRoom);
 router.post('/rooms/delete/:id', authCheck, adminCheck, roomController.postDeleteRoom);
+
+// --- Procurement Draft Routes (Kepala Laboratorium) ---
+router.get('/procurement-drafts', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.getDrafts);
+router.get('/procurement-drafts/create', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.getCreateDraft);
+router.post('/procurement-drafts', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.postCreateDraft);
+router.get('/procurement-drafts/:id', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.getDraftDetail);
+router.post('/procurement-drafts/:id/items', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.postCreateItem);
+router.get('/procurement-drafts/:id/items/:itemId/edit', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.getEditItem);
+router.post('/procurement-drafts/:id/items/:itemId/edit', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.postUpdateItem);
+router.post('/procurement-drafts/:id/items/:itemId/delete', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.postDeleteItem);
+router.post('/procurement-drafts/:id/submit', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.postSubmitDraft);
+router.post('/procurement-drafts/:id/lock', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.postLockDraft);
 
 module.exports = router;
