@@ -36,13 +36,21 @@ const Inventory = sequelize.define('Inventory', {
       key: 'id'
     }
   },
+  procurement_item_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'procurement_items',
+      key: 'id'
+    }
+  },
   label_number: {
     type: DataTypes.STRING,
     allowNull: true,
     unique: true
   },
   qr_image_path: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     allowNull: true
   }
 }, {

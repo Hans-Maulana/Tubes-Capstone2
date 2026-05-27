@@ -1,0 +1,67 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Ubah Inventaris
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/administration/inventories") Input Inventaris
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Ubah
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Ubah Nomor Label
+          p.card-subtitle.mb-3
+            | Barang: 
+            strong= inventory.name || (inventory.procurementItem ? inventory.procurementItem.item_name : '-')
+          if inventory.qr_image_path
+            .mb-3
+              label.form-label QR Saat Ini
+              img.rounded.border.d-block(src=inventory.qr_image_path alt=`QR ${inventory.label_number}` style="width: 96px; height: 96px; object-fit: cover;")
+          form(action=`/administration/inventories/${inventory.id}/edit` method="POST" onsubmit="return confirm('Simpan perubahan dan regenerate QR code?')")
+            .row
+              .col-md-6.mb-3
+                label.form-label Kondisi
+                select.form-select(name="condition" required)
+                  - const selectedCondition = (inventory.condition || 'Baik')
+                  option(value="Baik" selected=(selectedCondition === 'Baik')) Baik
+                  option(value="Maintenance" selected=(selectedCondition === 'Maintenance')) Maintenance
+                  option(value="Rusak" selected=(selectedCondition === 'Rusak')) Rusak
+              .col-md-6.mb-3
+                label.form-label Ruangan
+                select.form-select(name="room_id" required)
+                  option(value="" disabled selected=(!inventory.room_id)) -- Pilih Ruangan --
+                  each room in (rooms || [])
+                    option(value=room.id selected=(String(inventory.room_id) === String(room.id)))= room.name
+                if rooms && rooms.length > 0
+                  p.small.text-muted.mb-0.mt-1= `Daftar ruangan: ${rooms.map(r => r.name).join(', ')}`
+                else
+                  p.small.text-danger.mb-0.mt-1 Data ruangan kosong. Jalankan seeder room terlebih dahulu.
+            .mb-4
+              label.form-label Nomor Label
+              input.form-control(type="text" name="label_number" value=inventory.label_number required)
+            .d-flex.gap-2
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-device-floppy.me-1
+                | Simpan & Regenerate QR
+              a.btn.btn-outline-secondary(href="/administration/inventories") Batal

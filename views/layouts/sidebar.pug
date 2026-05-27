@@ -39,6 +39,23 @@ aside.left-sidebar
             a.sidebar-link(href="/procurement-drafts-history" aria-expanded="false")
               i.ti.ti-file-check
               span.hide-menu Review Pengadaan
+
+        if user && user.role === 'Staf Administrasi'
+          li.nav-small-cap
+            iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
+            span.hide-menu Administrasi Pengadaan
+          li.sidebar-item
+            a.sidebar-link(href="/administration/procurement-items" aria-expanded="false")
+              i.ti.ti-list-details
+              span.hide-menu Item Pengadaan
+          li.sidebar-item
+            a.sidebar-link(href="/administration/procurements" aria-expanded="false")
+              i.ti.ti-clipboard-list
+              span.hide-menu Penerimaan Barang
+          li.sidebar-item
+            a.sidebar-link(href="/administration/inventories" aria-expanded="false")
+              i.ti.ti-qrcode
+              span.hide-menu Input Inventaris
         
         if user && user.role === 'Administrator'
           li.nav-small-cap

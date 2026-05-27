@@ -61,3 +61,5 @@ const ProcurementReceipt = require('./ProcurementReceipt');
 ProcurementItem.belongsTo(ProcurementDraft, { foreignKey: 'draft_id', as: 'draft' });
 ProcurementItem.belongsTo(Inventory, { foreignKey: 'replacement_inventory_id', as: 'replacementInventory' });
 ProcurementItem.hasMany(ProcurementReceipt, { foreignKey: 'procurement_item_id', as: 'receipts' });
+ProcurementItem.hasMany(Inventory, { foreignKey: 'procurement_item_id', as: 'receivedInventories' });
+Inventory.belongsTo(ProcurementItem, { foreignKey: 'procurement_item_id', as: 'procurementItem' });

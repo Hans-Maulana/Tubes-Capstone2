@@ -1,0 +1,80 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Penerimaan Barang
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Administrasi Pengadaan
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if success
+    .alert.alert-success.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-check-circle.me-2
+      strong Sukses! 
+      = success
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-12
+      .card.w-100
+        .card-body
+          .d-flex.align-items-center.justify-content-between.mb-4
+            div
+              h5.card-title.fw-semibold.mb-0 Daftar Draf Disetujui
+              p.card-subtitle.mb-0 Draf pengadaan yang sudah disetujui dan siap diproses penerimaannya.
+
+          .table-responsive.mt-4
+            table.table.align-middle.text-nowrap.mb-0
+              thead.text-dark.fs-4
+                tr
+                  th.border-bottom-0.fw-semibold No
+                  th.border-bottom-0.fw-semibold Tahun
+                  th.border-bottom-0.fw-semibold Kepala Lab
+                  th.border-bottom-0.fw-semibold Item Disetujui
+                  th.border-bottom-0.fw-semibold Total Diterima
+                  th.border-bottom-0.fw-semibold Status
+                  th.border-bottom-0.fw-semibold.text-center Aksi
+              tbody
+                if drafts && drafts.length > 0
+                  each draft, index in drafts
+                    - const approvedItems = draft.items || []
+                    - const totalQuantity = approvedItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+                    - const totalReceived = approvedItems.reduce((sum, item) => sum + (item.receipts || []).reduce((receiptSum, receipt) => receiptSum + Number(receipt.quantity_received || 0), 0), 0)
+                    - const totalLabeled = approvedItems.reduce((sum, item) => sum + (item.receivedInventories ? item.receivedInventories.length : 0), 0)
+                    tr
+                      td.border-bottom-0= index + 1
+                      td.border-bottom-0
+                        h6.fw-semibold.mb-0= draft.year
+                      td.border-bottom-0= draft.labHead ? draft.labHead.name : '-'
+                      td.border-bottom-0= approvedItems.length
+                      td.border-bottom-0
+                        span.d-block= `${totalReceived} / ${totalQuantity}`
+                        small.text-muted= `${totalLabeled} unit berlabel`
+                      td.border-bottom-0
+                        if totalQuantity > 0 && totalReceived >= totalQuantity
+                          span.badge.bg-success.rounded-3.fw-semibold Selesai
+                        else
+                          span.badge.bg-warning.rounded-3.fw-semibold Proses Penerimaan
+                      td.border-bottom-0.text-center
+                        a.btn.btn-sm.btn-outline-primary.d-inline-flex.align-items-center.gap-1(href=`/administration/procurements/${draft.id}`)
+                          i.ti.ti-file-search
+                          | Detail
+                else
+                  tr
+                    td.text-center.py-4(colspan="7") Belum ada draf pengadaan yang disetujui.

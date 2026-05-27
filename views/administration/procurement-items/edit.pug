@@ -1,0 +1,57 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Ubah Item Pengadaan
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/administration/procurement-items") Item Pengadaan
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Edit
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Form Item Pengadaan
+          form(action=`/administration/procurement-items/${item.id}/edit` method="POST")
+            .mb-3
+              label.form-label Jenis Barang
+              select.form-select(name="item_type" required)
+                option(value="Inventaris" selected=(item.item_type === 'Inventaris')) Inventaris
+                option(value="BHP" selected=(item.item_type === 'BHP')) BHP
+            .mb-3
+              label.form-label Nama Barang
+              input.form-control(type="text" name="item_name" value=item.item_name required)
+            .row
+              .col-md-6.mb-3
+                label.form-label Jumlah
+                input.form-control(type="number" name="quantity" min="1" value=item.quantity required)
+              .col-md-6.mb-3
+                label.form-label Harga
+                input.form-control(type="number" name="price" min="0" value=item.price required)
+            .mb-4
+              label.form-label Link Pembelian
+              input.form-control(type="url" name="purchase_link" value=(item.purchase_link || ''))
+            .d-flex.gap-2
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-device-floppy.me-1
+                | Simpan
+              a.btn.btn-outline-secondary(href="/administration/procurement-items") Batal

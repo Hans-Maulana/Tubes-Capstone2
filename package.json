@@ -24,6 +24,7 @@
     "express-session": "^1.19.0",
     "mysql2": "^3.22.3",
     "pug": "^3.0.4",
+    "qrcode": "^1.5.4",
     "sequelize": "^6.37.8"
   },
   "devDependencies": {

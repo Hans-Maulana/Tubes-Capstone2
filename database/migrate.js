@@ -5,19 +5,30 @@ const { Sequelize } = require('sequelize');
 
 const force = process.argv.includes('--force');
 const undo = process.argv.includes('--undo');
+const MIGRATIONS_TABLE = 'sequelize_meta';
 
 async function ensureMigrationsTable() {
-  await sequelize.getQueryInterface().createTable('SequelizeMeta', {
+  const queryInterface = sequelize.getQueryInterface();
+  const tables = await queryInterface.showAllTables();
+  const tableExists = tables
+    .map(table => (typeof table === 'object' ? table.tableName : table))
+    .some(table => table.toLowerCase() === MIGRATIONS_TABLE);
+
+  if (tableExists) {
+    return;
+  }
+
+  await queryInterface.createTable(MIGRATIONS_TABLE, {
     name: {
       type: Sequelize.STRING,
       allowNull: false,
       primaryKey: true
     }
-  }).catch(() => {});
+  });
 }
 
 async function getExecutedMigrations() {
-  const [results] = await sequelize.query('SELECT name FROM SequelizeMeta ORDER BY name ASC');
+  const [results] = await sequelize.query(`SELECT name FROM ${MIGRATIONS_TABLE} ORDER BY name ASC`);
   return results.map(r => r.name);
 }
 
@@ -51,10 +62,10 @@ async function runMigrations() {
         }
       }
 
-      // Drop SequelizeMeta
-      await sequelize.getQueryInterface().dropTable('SequelizeMeta').catch(() => {});
+      // Drop migration metadata table
+      await sequelize.getQueryInterface().dropTable(MIGRATIONS_TABLE).catch(() => {});
 
-      // Buat ulang SequelizeMeta
+      // Buat ulang metadata migrasi
       await ensureMigrationsTable();
 
       // Jalankan semua migrasi
@@ -62,7 +73,7 @@ async function runMigrations() {
       for (const file of files) {
         const migration = require(path.join(__dirname, 'migrations', file));
         await migration.up(sequelize.getQueryInterface(), Sequelize);
-        await sequelize.query('INSERT INTO SequelizeMeta (name) VALUES (?)', {
+        await sequelize.query(`INSERT INTO ${MIGRATIONS_TABLE} (name) VALUES (?)`, {
           replacements: [file]
         });
         console.log(`  ↑ Migrated: ${file}`);
@@ -85,7 +96,7 @@ async function runMigrations() {
       const lastMigration = executed[executed.length - 1];
       const migration = require(path.join(__dirname, 'migrations', lastMigration));
       await migration.down(sequelize.getQueryInterface(), Sequelize);
-      await sequelize.query('DELETE FROM SequelizeMeta WHERE name = ?', {
+      await sequelize.query(`DELETE FROM ${MIGRATIONS_TABLE} WHERE name = ?`, {
         replacements: [lastMigration]
       });
       console.log(`  ↓ Reverted: ${lastMigration}`);
@@ -108,7 +119,7 @@ async function runMigrations() {
     for (const file of pending) {
       const migration = require(path.join(__dirname, 'migrations', file));
       await migration.up(sequelize.getQueryInterface(), Sequelize);
-      await sequelize.query('INSERT INTO SequelizeMeta (name) VALUES (?)', {
+      await sequelize.query(`INSERT INTO ${MIGRATIONS_TABLE} (name) VALUES (?)`, {
         replacements: [file]
       });
       console.log(`  ↑ Migrated: ${file}`);

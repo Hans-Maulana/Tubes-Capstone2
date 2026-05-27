@@ -5,13 +5,16 @@ const dashboardController = require('../controllers/dashboardController');
 const userController = require('../controllers/userController');
 const roomController = require('../controllers/roomController');
 const procurementDraftController = require('../controllers/procurementDraftController');
+const administrationController = require('../controllers/administrationController');
 const authCheck = require('../middlewares/authCheck');
 const adminCheck = require('../middlewares/adminCheck');
+const adminStaffCheck = require('../middlewares/adminStaffCheck');
 const roleCheck = require('../middlewares/roleCheck');
 
 // Define main/landing route
 // router.get('/', homeController.getHome);
 router.get('/home', homeController.getHome);
+router.get('/inventory-label/:label', administrationController.getInventoryByLabel);
 
 // Secure Dashboard Route protected by authCheck middleware
 router.get('/', authCheck, dashboardController.getDashboard);
@@ -53,5 +56,19 @@ router.post('/procurement-drafts-history/:id/items/:itemId/approve', authCheck, 
 router.post('/procurement-drafts-history/:id/items/:itemId/reject', authCheck, roleCheck('Ketua Program Studi'), procurementDraftController.postRejectItem);
 router.post('/procurement-drafts-history/:id/finalize', authCheck, roleCheck('Ketua Program Studi'), procurementDraftController.postFinalizeDraft);
 
+// --- Administration Staff Routes ---
+router.get('/administration/procurement-items', authCheck, adminStaffCheck, administrationController.getProcurementItems);
+router.get('/administration/procurement-items/:itemId/edit', authCheck, adminStaffCheck, administrationController.getEditProcurementItem);
+router.post('/administration/procurement-items/:itemId/edit', authCheck, adminStaffCheck, administrationController.postUpdateProcurementItem);
+router.post('/administration/procurement-items/:itemId/delete', authCheck, adminStaffCheck, administrationController.postDeleteProcurementItem);
+router.get('/administration/procurements', authCheck, adminStaffCheck, administrationController.getApprovedDrafts);
+router.get('/administration/procurements/:id', authCheck, adminStaffCheck, administrationController.getApprovedDraftDetail);
+router.post('/administration/procurements/:id/items/:itemId/receipts', authCheck, adminStaffCheck, administrationController.postCreateReceipt);
+router.get('/administration/inventories', authCheck, adminStaffCheck, administrationController.getInventories);
+router.get('/administration/inventories/create', authCheck, adminStaffCheck, administrationController.getCreateInventory);
+router.post('/administration/inventories', authCheck, adminStaffCheck, administrationController.postCreateInventory);
+router.get('/administration/inventories/:id/edit', authCheck, adminStaffCheck, administrationController.getEditInventory);
+router.post('/administration/inventories/:id/edit', authCheck, adminStaffCheck, administrationController.postUpdateInventory);
+router.post('/administration/inventories/:id/delete', authCheck, adminStaffCheck, administrationController.postDeleteInventory);
 
 module.exports = router;

@@ -1,0 +1,112 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Input Inventaris
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Input Inventaris
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if success
+    .alert.alert-success.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-check-circle.me-2
+      strong Sukses! 
+      = success
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .card.w-100.mb-4
+    .card-body
+      h5.card-title.fw-semibold.mb-1 Item Menunggu Label
+      p.card-subtitle.mb-4 Hanya barang yang sudah dicatat di Penerimaan Barang yang bisa diberi label (1 unit diterima = 1 label = 1 QR).
+
+      .table-responsive
+        table.table.align-middle.text-nowrap.mb-0
+          thead.text-dark.fs-4
+            tr
+              th.border-bottom-0.fw-semibold No
+              th.border-bottom-0.fw-semibold Nama Barang
+              th.border-bottom-0.fw-semibold Tahun
+              th.border-bottom-0.fw-semibold Progress Label
+              th.border-bottom-0.fw-semibold.text-center Aksi
+          tbody
+            if pendingItems && pendingItems.length > 0
+              each entry, index in pendingItems
+                tr
+                  td.border-bottom-0= index + 1
+                  td.border-bottom-0
+                    h6.fw-semibold.mb-0= entry.item.item_name
+                  td.border-bottom-0= entry.item.draft ? entry.item.draft.year : '-'
+                  td.border-bottom-0
+                    span= `${entry.labeled} / ${entry.received} berlabel`
+                    small.text-muted.d-block Disetujui: #{entry.approved}
+                    span.badge.bg-warning.rounded-3.fw-semibold.mt-1= `Sisa ${entry.remaining}`
+                  td.border-bottom-0.text-center
+                    a.btn.btn-sm.btn-primary(href=`/administration/inventories/create?item=${entry.item.id}`)
+                      i.ti.ti-qrcode.me-1
+                      | Input Label
+            else
+              tr
+                td.text-center.py-4(colspan="5")
+                  if hasAnyReceipt
+                    | Semua unit yang sudah diterima sudah memiliki label.
+                  else
+                    | Belum ada penerimaan barang inventaris.
+                    br
+                    small.text-muted Lakukan penerimaan terlebih dahulu di menu Penerimaan Barang.
+
+  .card.w-100
+    .card-body
+      h5.card-title.fw-semibold.mb-1 Daftar Inventaris Berlabel
+      p.card-subtitle.mb-4 Satu baris = satu unit barang = satu nomor label = satu QR code.
+
+      .table-responsive.mt-2
+        table.table.align-middle.text-nowrap.mb-0
+          thead.text-dark.fs-4
+            tr
+              th.border-bottom-0.fw-semibold No
+              th.border-bottom-0.fw-semibold Nomor Label
+              th.border-bottom-0.fw-semibold Nama Barang
+              th.border-bottom-0.fw-semibold Tahun
+              th.border-bottom-0.fw-semibold QR
+              th.border-bottom-0.fw-semibold.text-center Aksi
+          tbody
+            if inventories && inventories.length > 0
+              each inv, index in inventories
+                tr
+                  td.border-bottom-0= index + 1
+                  td.border-bottom-0
+                    h6.fw-semibold.mb-0= inv.label_number || '-'
+                  td.border-bottom-0= inv.name || (inv.procurementItem ? inv.procurementItem.item_name : '-')
+                  td.border-bottom-0= inv.procurementItem && inv.procurementItem.draft ? inv.procurementItem.draft.year : '-'
+                  td.border-bottom-0
+                    if inv.qr_image_path
+                      img.rounded.border(src=inv.qr_image_path alt=`QR ${inv.label_number}` style="width: 48px; height: 48px; object-fit: cover;")
+                      a.small.d-block.mt-1(href=`/inventory-label/${encodeURIComponent(inv.label_number)}` target="_blank") Detail
+                    else
+                      span.text-muted -
+                  td.border-bottom-0.text-center
+                    .d-flex.justify-content-center.gap-1
+                      a.btn.btn-sm.btn-outline-primary(href=`/administration/inventories/${inv.id}/edit`)
+                        i.ti.ti-edit
+                      form(action=`/administration/inventories/${inv.id}/delete` method="POST" onsubmit="return confirm('Hapus inventaris ini?')")
+                        button.btn.btn-sm.btn-outline-danger(type="submit")
+                          i.ti.ti-trash
+            else
+              tr
+                td.text-center.py-4(colspan="6") Belum ada inventaris berlabel.

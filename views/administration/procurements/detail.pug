@@ -1,0 +1,110 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8= `Penerimaan Pengadaan ${draft.year}`
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/administration/procurements") Penerimaan Barang
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Detail
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if success
+    .alert.alert-success.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-check-circle.me-2
+      strong Sukses! 
+      = success
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-4
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-3 Ringkasan Draf
+          .mb-3
+            p.mb-1.text-muted Tahun Pengadaan
+            h6.fw-semibold.mb-0= draft.year
+          .mb-3
+            p.mb-1.text-muted Diajukan Oleh
+            h6.fw-semibold.mb-0= draft.labHead ? draft.labHead.name : '-'
+          .mb-3
+            p.mb-1.text-muted Status Draf
+            span.badge.bg-success.rounded-3.fw-semibold Disetujui
+          .mb-0
+            p.mb-1.text-muted Item Disetujui
+            h6.fw-semibold.mb-0= draft.items ? draft.items.length : 0
+
+    .col-lg-8
+      if draft.items && draft.items.length > 0
+        each item, index in draft.items
+          - const receipts = item.receipts || []
+          - const receivedTotal = receipts.reduce((sum, receipt) => sum + Number(receipt.quantity_received || 0), 0)
+          - const remaining = Number(item.quantity || 0) - receivedTotal
+          .card.mb-3
+            .card-body
+              .d-flex.align-items-start.justify-content-between.mb-3
+                div
+                  h5.card-title.fw-semibold.mb-1= item.item_name || '-'
+                  p.card-subtitle.mb-0
+                    span.badge.bg-light-primary.text-primary.fw-semibold.me-2= item.item_type || '-'
+                    | #{receivedTotal} dari #{item.quantity || 0} barang diterima
+                if remaining <= 0
+                  span.badge.bg-success.rounded-3.fw-semibold Lengkap
+                else
+                  span.badge.bg-warning.rounded-3.fw-semibold= `Sisa ${remaining}`
+
+              h6.fw-semibold.mb-3 Input Penerimaan Barang
+              form(action=`/administration/procurements/${draft.id}/items/${item.id}/receipts` method="POST")
+                .row
+                  .col-md-6.mb-3
+                    label.form-label Tanggal Diterima
+                    input.form-control(type="date" name="received_date" required disabled=(remaining <= 0))
+                  .col-md-6.mb-3
+                    label.form-label Jumlah Diterima
+                    input.form-control(type="number" name="quantity_received" min="1" max=remaining value=(remaining > 0 ? 1 : 0) required disabled=(remaining <= 0))
+                button.btn.btn-primary.d-inline-flex.align-items-center.gap-1(type="submit" disabled=(remaining <= 0))
+                  i.ti.ti-calendar-plus
+                  | Simpan Penerimaan
+              if item.item_type === 'BHP'
+                p.small.text-muted.mt-2.mb-0 Stok BHP akan bertambah otomatis saat penerimaan disimpan.
+
+              if receipts.length > 0
+                h6.fw-semibold.mt-4.mb-3 Riwayat Penerimaan
+                .table-responsive
+                  table.table.align-middle.text-nowrap.mb-0
+                    thead.text-dark.fs-4
+                      tr
+                        th.border-bottom-0.fw-semibold Tanggal
+                        th.border-bottom-0.fw-semibold Jumlah
+                        th.border-bottom-0.fw-semibold Dicatat Oleh
+                    tbody
+                      each receipt in receipts
+                        tr
+                          td.border-bottom-0= new Date(receipt.received_date).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
+                          td.border-bottom-0= receipt.quantity_received || 0
+                          td.border-bottom-0= receipt.adminStaff ? receipt.adminStaff.name : '-'
+              else
+                .alert.alert-info.small.mb-0.mt-4
+                  i.ti.ti-info-circle.me-1
+                  | Belum ada penerimaan untuk item ini.
+      else
+        .card
+          .card-body.text-center.py-5
+            i.ti.ti-file-off.fs-8.text-muted
+            p.text-muted.mb-0.mt-2 Tidak ada item pengadaan yang disetujui pada draf ini.

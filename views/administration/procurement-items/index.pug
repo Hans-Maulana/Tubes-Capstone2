@@ -1,0 +1,86 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Item Pengadaan
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Item Pengadaan
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if success
+    .alert.alert-success.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-check-circle.me-2
+      strong Sukses! 
+      = success
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .card.w-100
+    .card-body
+      .d-flex.align-items-center.justify-content-between.mb-4
+        div
+          h5.card-title.fw-semibold.mb-0 Daftar Item Pengadaan Disetujui
+          p.card-subtitle.mb-0 Kelola item terlebih dahulu sebelum mencatat penerimaan barang.
+        a.btn.btn-sm.btn-primary(href="/administration/procurements")
+          i.ti.ti-truck-delivery.me-1
+          | Lanjut ke Penerimaan
+
+      .table-responsive.mt-4
+        table.table.align-middle.text-nowrap.mb-0
+          thead.text-dark.fs-4
+            tr
+              th.border-bottom-0.fw-semibold No
+              th.border-bottom-0.fw-semibold Nama Barang
+              th.border-bottom-0.fw-semibold Jenis
+              th.border-bottom-0.fw-semibold Tahun
+              th.border-bottom-0.fw-semibold Qty
+              th.border-bottom-0.fw-semibold Diterima
+              th.border-bottom-0.fw-semibold Berlabel
+              th.border-bottom-0.fw-semibold.text-center Aksi
+          tbody
+            if items && items.length > 0
+              each item, index in items
+                - const receivedTotal = (item.receipts || []).reduce((sum, receipt) => sum + Number(receipt.quantity_received || 0), 0)
+                - const labeledTotal = item.receivedInventories ? item.receivedInventories.length : 0
+                tr
+                  td.border-bottom-0= index + 1
+                  td.border-bottom-0
+                    h6.fw-semibold.mb-0= item.item_name || '-'
+                    if item.purchase_link
+                      a.small.text-primary(href=item.purchase_link target="_blank") Link Pembelian
+                  td.border-bottom-0
+                    span.badge.bg-light-primary.text-primary.fw-semibold= item.item_type || '-'
+                  td.border-bottom-0= item.draft ? item.draft.year : '-'
+                  td.border-bottom-0= item.quantity || 0
+                  td.border-bottom-0= receivedTotal
+                  td.border-bottom-0= labeledTotal
+                  td.border-bottom-0.text-center
+                    .d-flex.justify-content-center.gap-1
+                      a.btn.btn-sm.btn-outline-primary(href=`/administration/procurement-items/${item.id}/edit`)
+                        i.ti.ti-edit.me-1
+                        | Edit
+                      if item.draft
+                        a.btn.btn-sm.btn-outline-success(href=`/administration/procurements/${item.draft.id}`)
+                          i.ti.ti-calendar-plus.me-1
+                          | Receipt
+                      form(action=`/administration/procurement-items/${item.id}/delete` method="POST" onsubmit="return confirm('Hapus item pengadaan ini?')")
+                        button.btn.btn-sm.btn-outline-danger(type="submit" disabled=(receivedTotal > 0 || labeledTotal > 0))
+                          i.ti.ti-trash
+            else
+              tr
+                td.text-center.py-4(colspan="8") Belum ada item pengadaan yang disetujui.

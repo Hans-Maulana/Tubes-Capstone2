@@ -1,0 +1,62 @@
+doctype html
+html(lang="id")
+  head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
+    title= title || 'Detail Inventaris'
+    link(rel="stylesheet" href="/assets/css/styles.min.css")
+    link(rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css")
+  body.bg-light
+    .container.py-4
+      .row.justify-content-center
+        .col-lg-7
+          .card
+            .card-body.p-4
+              if inventory
+                .d-flex.align-items-start.justify-content-between.mb-4
+                  div
+                    p.text-muted.mb-1 Nomor Label
+                    h3.fw-semibold.mb-0= inventory.label_number
+                  if inventory.qr_image_path
+                    img.rounded.border(src=inventory.qr_image_path alt=`QR ${inventory.label_number}` style="width: 96px; height: 96px; object-fit: cover;")
+
+                .mb-3
+                  p.text-muted.mb-1 Nama Barang
+                  h5.fw-semibold.mb-0= inventory.name
+                .row
+                  .col-sm-6.mb-3
+                    p.text-muted.mb-1 Kategori
+                    h6.fw-semibold.mb-0= inventory.category || '-'
+                  .col-sm-6.mb-3
+                    p.text-muted.mb-1 Kondisi
+                    if inventory.condition === 'Baik'
+                      span.badge.bg-success.rounded-3.fw-semibold Baik
+                    else if inventory.condition === 'Maintenance'
+                      span.badge.bg-warning.rounded-3.fw-semibold Maintenance
+                    else
+                      span.badge.bg-danger.rounded-3.fw-semibold= inventory.condition || '-'
+                  .col-sm-6.mb-3
+                    p.text-muted.mb-1 Tanggal Pembelian
+                    h6.fw-semibold.mb-0= inventory.purchase_date ? new Date(inventory.purchase_date).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'
+                  .col-sm-6.mb-3
+                    p.text-muted.mb-1 Harga
+                    h6.fw-semibold.mb-0= `Rp ${Number(inventory.price || 0).toLocaleString('id-ID')}`
+
+                if inventory.procurementItem
+                  hr
+                  h6.fw-semibold.mb-3 Sumber Pengadaan
+                  .row
+                    .col-sm-6.mb-3
+                      p.text-muted.mb-1 Item Pengadaan
+                      h6.fw-semibold.mb-0= inventory.procurementItem.item_name || '-'
+                    .col-sm-6.mb-3
+                      p.text-muted.mb-1 Tahun Draf
+                      h6.fw-semibold.mb-0= inventory.procurementItem.draft ? inventory.procurementItem.draft.year : '-'
+                    .col-sm-6.mb-3
+                      p.text-muted.mb-1 Kepala Lab
+                      h6.fw-semibold.mb-0= inventory.procurementItem.draft && inventory.procurementItem.draft.labHead ? inventory.procurementItem.draft.labHead.name : '-'
+              else
+                .text-center.py-5
+                  i.bi.bi-exclamation-circle.fs-1.text-muted
+                  h4.fw-semibold.mt-3 Inventaris Tidak Ditemukan
+                  p.text-muted.mb-0 Nomor label pada QR code tidak ditemukan di sistem.
