@@ -48,6 +48,34 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get('/debug-db-status', async (req, res) => {
+  try {
+    const models = require('./models');
+    let data = {
+      config: {
+        DB_NAME: process.env.DB_NAME,
+        DB_HOST: process.env.DB_HOST,
+        DB_PORT: process.env.DB_PORT,
+      },
+      counts: {}
+    };
+    for (const modelName of Object.keys(models)) {
+      if (modelName === 'sequelize') continue;
+      try {
+        data.counts[modelName] = await models[modelName].count();
+        if (modelName === 'Room') {
+          data.rooms = await models.Room.findAll();
+        }
+      } catch (err) {
+        data.counts[modelName] = `Error: ${err.message}`;
+      }
+    }
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
 // Router binding
 app.use('/auth', authRoutes);
 app.use('/', routes);
@@ -87,6 +115,12 @@ async function bootServer() {
     console.log('🔄 Checking database connection using Sequelize...');
     await sequelize.authenticate();
     console.log('✅ Database connection successfully established!');
+    console.log('DB Config in app.js:', {
+      database: sequelize.config.database,
+      username: sequelize.config.username,
+      host: sequelize.config.host,
+      port: sequelize.config.port
+    });
   } catch (error) {
     console.error('❌ Database connection failed on startup:');
     console.error(`   -> ${error.message}`);
@@ -101,3 +135,4 @@ async function bootServer() {
 }
 
 bootServer();
+
