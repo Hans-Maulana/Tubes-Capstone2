@@ -46,4 +46,12 @@ router.post('/procurement-drafts/:id/items/:itemId/delete', authCheck, roleCheck
 router.post('/procurement-drafts/:id/submit', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.postSubmitDraft);
 router.post('/procurement-drafts/:id/lock', authCheck, roleCheck('Kepala Laboratorium'), procurementDraftController.postLockDraft);
 
+// --- Review/Validation Routes (Ketua Program Studi Only) ---
+router.get('/procurement-drafts-history', authCheck, roleCheck('Ketua Program Studi'), procurementDraftController.getReviewDrafts);
+router.get('/procurement-drafts-history/:id', authCheck, roleCheck('Ketua Program Studi'), procurementDraftController.getReviewDraftDetail);
+router.post('/procurement-drafts-history/:id/items/:itemId/approve', authCheck, roleCheck('Ketua Program Studi'), procurementDraftController.postApproveItem);
+router.post('/procurement-drafts-history/:id/items/:itemId/reject', authCheck, roleCheck('Ketua Program Studi'), procurementDraftController.postRejectItem);
+router.post('/procurement-drafts-history/:id/finalize', authCheck, roleCheck('Ketua Program Studi'), procurementDraftController.postFinalizeDraft);
+
+
 module.exports = router;

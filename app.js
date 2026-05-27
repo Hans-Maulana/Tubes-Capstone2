@@ -21,9 +21,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+const SequelizeStore = require('connect-session-sequelize')(session.Store);
+
+const sessionStore = new SequelizeStore({
+  db: sequelize,
+  tableName: 'sessions'
+});
+
+// Sync session store table
+sessionStore.sync();
+
 // Configure Session Middleware
 app.use(session({
   secret: process.env.SESSION_SECRET || 'tubes-capstone-secret-key-12345',
+  store: sessionStore,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -84,8 +95,7 @@ async function bootServer() {
 
   app.listen(PORT, () => {
     console.log('================================================================');
-    console.log(`🚀 Express Application Online: http://localhost:${PORT}`);
-    console.log(`🌐 Server running in [${process.env.NODE_ENV || 'development'}] mode`);
+    console.log(`Server berjalan di : http://localhost:${PORT}`);
     console.log('================================================================');
   });
 }

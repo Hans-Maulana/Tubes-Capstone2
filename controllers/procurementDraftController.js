@@ -5,7 +5,7 @@ const Inventory = require('../models/Inventory');
 const User = require('../models/User');
 
 function isLocked(draft) {
-  return draft && draft.status === 'Locked';
+  return draft && ['Locked', 'Approved', 'Rejected'].includes(draft.status);
 }
 
 async function findOwnedDraft(id, userId) {
@@ -342,14 +342,191 @@ exports.postLockDraft = async (req, res, next) => {
     }
 
     if (!draft.items || draft.items.length === 0) {
-      req.session.error = 'Tambahkan minimal satu item sebelum mengunci draf.';
+      req.session.error = 'Tambahkan minimal satu item sebelum mengajukan finalisasi draf.';
       return res.redirect(`/procurement-drafts/${draft.id}`);
     }
 
     await draft.update({ status: 'Locked' });
-    req.session.success = 'Draf pengadaan berhasil dikunci dan tidak dapat diubah lagi.';
+    req.session.success = 'Pengajuan finalisasi draf pengadaan berhasil dikirim.';
     return res.redirect(`/procurement-drafts/${draft.id}`);
   } catch (error) {
     next(error);
   }
 };
+
+exports.getReviewDrafts = async (req, res, next) => {
+  try {
+    const drafts = await ProcurementDraft.findAll({
+      where: {
+        status: {
+          [Op.in]: ['Submitted', 'Locked', 'Approved', 'Rejected']
+        }
+      },
+      include: [
+        { model: User, as: 'labHead' },
+        { model: ProcurementItem, as: 'items' }
+      ],
+      order: [['year', 'DESC'], ['id', 'DESC']]
+    });
+
+    res.render('procurement-drafts/review-index', {
+      title: 'Review Pengadaan - Sistem Inventaris Laboratorium',
+      drafts,
+      success: req.session.success || null,
+      error: req.session.error || null
+    });
+
+    req.session.success = null;
+    req.session.error = null;
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getReviewDraftDetail = async (req, res, next) => {
+  try {
+    const draft = await ProcurementDraft.findOne({
+      where: {
+        id: req.params.id,
+        status: {
+          [Op.in]: ['Submitted', 'Locked', 'Approved', 'Rejected']
+        }
+      },
+      include: [
+        { model: User, as: 'labHead' },
+        {
+          model: ProcurementItem,
+          as: 'items',
+          include: [{ model: Inventory, as: 'replacementInventory' }]
+        }
+      ],
+      order: [[{ model: ProcurementItem, as: 'items' }, 'id', 'ASC']]
+    });
+
+    if (!draft) {
+      req.session.error = 'Draf pengadaan tidak ditemukan atau belum diajukan.';
+      return res.redirect('/procurement-drafts-history');
+    }
+
+    return res.render('procurement-drafts/review-detail', {
+      title: `Review Draf Pengadaan ${draft.year} - Sistem Inventaris Laboratorium`,
+      draft,
+      success: req.session.success || null,
+      error: req.session.error || null
+    });
+  } catch (error) {
+    next(error);
+  } finally {
+    req.session.success = null;
+    req.session.error = null;
+  }
+};
+
+exports.postApproveItem = async (req, res, next) => {
+  try {
+    const draft = await ProcurementDraft.findOne({
+      where: {
+        id: req.params.id,
+        status: {
+          [Op.in]: ['Submitted', 'Locked']
+        }
+      }
+    });
+
+    if (!draft) {
+      req.session.error = 'Draf tidak ditemukan, sudah difinalisasi, atau belum siap untuk direview.';
+      return res.redirect(`/procurement-drafts-history/${req.params.id}`);
+    }
+
+    const item = await ProcurementItem.findOne({
+      where: {
+        id: req.params.itemId,
+        draft_id: draft.id
+      }
+    });
+
+    if (!item) {
+      req.session.error = 'Item pengadaan tidak ditemukan.';
+      return res.redirect(`/procurement-drafts-history/${draft.id}`);
+    }
+
+    await item.update({ status: 'Approved' });
+    req.session.success = `Item "${item.item_name}" disetujui.`;
+    return res.redirect(`/procurement-drafts-history/${draft.id}`);
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.postRejectItem = async (req, res, next) => {
+  try {
+    const draft = await ProcurementDraft.findOne({
+      where: {
+        id: req.params.id,
+        status: {
+          [Op.in]: ['Submitted', 'Locked']
+        }
+      }
+    });
+
+    if (!draft) {
+      req.session.error = 'Draf tidak ditemukan, sudah difinalisasi, atau belum siap untuk direview.';
+      return res.redirect(`/procurement-drafts-history/${req.params.id}`);
+    }
+
+    const item = await ProcurementItem.findOne({
+      where: {
+        id: req.params.itemId,
+        draft_id: draft.id
+      }
+    });
+
+    if (!item) {
+      req.session.error = 'Item pengadaan tidak ditemukan.';
+      return res.redirect(`/procurement-drafts-history/${draft.id}`);
+    }
+
+    await item.update({ status: 'Rejected' });
+    req.session.success = `Item "${item.item_name}" ditolak.`;
+    return res.redirect(`/procurement-drafts-history/${draft.id}`);
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.postFinalizeDraft = async (req, res, next) => {
+  const { decision } = req.body;
+  try {
+    const draft = await ProcurementDraft.findOne({
+      where: {
+        id: req.params.id,
+        status: 'Locked'
+      },
+      include: [{ model: ProcurementItem, as: 'items' }]
+    });
+
+    if (!draft) {
+      req.session.error = 'Draf tidak ditemukan, sudah difinalisasi, atau belum diajukan finalisasi.';
+      return res.redirect('/procurement-drafts-history');
+    }
+
+    if (!decision || !['Approved', 'Rejected'].includes(decision)) {
+      req.session.error = 'Keputusan finalisasi tidak valid.';
+      return res.redirect(`/procurement-drafts-history/${draft.id}`);
+    }
+
+    // Check if there are items that haven't been reviewed yet (status is still 'Draft' or null/Pending)
+    const pendingItems = draft.items.filter(item => item.status === 'Draft' || !item.status || item.status === 'Pending');
+    if (pendingItems.length > 0) {
+      req.session.error = 'Harap setujui atau tolak semua item terlebih dahulu sebelum melakukan finalisasi.';
+      return res.redirect(`/procurement-drafts-history/${draft.id}`);
+    }
+
+    await draft.update({ status: decision });
+    req.session.success = `Draf pengadaan tahun ${draft.year} telah berhasil difinalisasi dengan status: ${decision === 'Approved' ? 'Disetujui' : 'Ditolak'}.`;
+    return res.redirect(`/procurement-drafts-history/${draft.id}`);
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -50,6 +50,7 @@ block content
                 tr
                   th.border-bottom-0.fw-semibold No
                   th.border-bottom-0.fw-semibold Nama Ruangan
+                  th.border-bottom-0.fw-semibold Kode Ruangan
                   th.border-bottom-0.fw-semibold Lokasi
                   th.border-bottom-0.fw-semibold Deskripsi / Keterangan
                   if user && user.role === 'Administrator'
@@ -62,6 +63,8 @@ block content
                         h6.fw-normal.mb-0= index + 1
                       td.border-bottom-0
                         h6.fw-semibold.mb-0= room.name
+                      td.border-bottom-0
+                        span.badge.bg-light-secondary.text-secondary.fw-semibold= room.code || '-'
                       td.border-bottom-0
                         span.badge.bg-light-secondary.text-secondary.fw-semibold= room.location || '-'
                       td.border-bottom-0

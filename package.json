@@ -4,10 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon app.js",
+    "dev": "nodemon --ext js,json,pug app.js",
     "start": "node app.js",
-    "db:sync": "node database/sync.js --alter",
-    "db:fresh": "node database/sync.js --force",
+    "db:migrate": "node database/migrate.js",
+    "db:migrate:undo": "node database/migrate.js --undo",
+    "db:fresh": "node database/migrate.js --force",
     "seed": "node database/seed.js",
     "db:reset": "npm run db:fresh && npm run seed"
   },
@@ -17,6 +18,7 @@
   "type": "commonjs",
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "connect-session-sequelize": "^8.0.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-session": "^1.19.0",

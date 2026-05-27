@@ -32,6 +32,13 @@ block content
       = error
       button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
 
+  if draft.status === 'Submitted'
+    .alert.alert-info.alert-dismissible.fade.show(role="alert")
+      i.ti.ti-info-circle.me-2
+      strong Info! 
+      | Draf telah diajukan. Anda masih dapat mengedit draf sampai melakukan pengajuan finalisasi. Item sedang menunggu review dari Ketua Program Studi.
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
   .row
     .col-lg-4
       .card
@@ -46,6 +53,10 @@ block content
               span.badge.bg-dark.rounded-3.fw-semibold Locked
             else if draft.status === 'Submitted'
               span.badge.bg-info.rounded-3.fw-semibold Submitted
+            else if draft.status === 'Approved'
+              span.badge.bg-success.rounded-3.fw-semibold Disetujui
+            else if draft.status === 'Rejected'
+              span.badge.bg-danger.rounded-3.fw-semibold Ditolak
             else
               span.badge.bg-warning.rounded-3.fw-semibold= draft.status
           .mb-3
@@ -57,54 +68,26 @@ block content
               | Draf terkunci dan tidak dapat diubah.
           else
             .d-flex.flex-column.gap-2
-              form(action=`/procurement-drafts/${draft.id}/submit` method="POST")
-                button.btn.btn-outline-primary.w-100(type="submit")
-                  i.ti.ti-send.me-1
-                  | Ajukan Draf
-              form(action=`/procurement-drafts/${draft.id}/lock` method="POST" onsubmit="return confirm('Kunci draf ini? Setelah terkunci, data tidak dapat diubah.')")
-                button.btn.btn-dark.w-100(type="submit")
-                  i.ti.ti-lock.me-1
-                  | Kunci Draf
-
+              if draft.status === 'Submitted'
+                form(action=`/procurement-drafts/${draft.id}/lock` method="POST" onsubmit="return confirm('Apakah Anda yakin ingin mengajukan finalisasi draf ini? Setelah diajukan, draf tidak dapat diubah lagi.')")
+                  button.btn.btn-dark.w-100(type="submit")
+                    i.ti.ti-lock.me-1
+                    | Pengajuan Finalisasi
+              else
+                form(action=`/procurement-drafts/${draft.id}/submit` method="POST")
+                  button.btn.btn-outline-primary.w-100(type="submit")
+                    i.ti.ti-send.me-1
+                    | Ajukan Draf
     .col-lg-8
-      if !locked
-        .card
-          .card-body
-            h5.card-title.fw-semibold.mb-4 Tambah Item Pengadaan
-            form(action=`/procurement-drafts/${draft.id}/items` method="POST")
-              .row
-                .col-md-6.mb-3
-                  label.form-label(for="item_type") Jenis Barang
-                  select#item_type.form-select(name="item_type" required)
-                    option(value="" disabled selected) -- Pilih Jenis --
-                    option(value="Inventaris") Inventaris
-                    option(value="BHP") Barang Habis Pakai
-                .col-md-6.mb-3
-                  label.form-label(for="item_name") Nama Barang
-                  input#item_name.form-control(type="text" name="item_name" placeholder="Contoh: Oscilloscope / Kabel jumper" required)
-                .col-md-6.mb-3
-                  label.form-label(for="quantity") Jumlah
-                  input#quantity.form-control(type="number" name="quantity" min="1" required)
-                .col-md-6.mb-3
-                  label.form-label(for="price") Harga Satuan
-                  input#price.form-control(type="number" name="price" min="0" required)
-                .col-12.mb-3
-                  label.form-label(for="purchase_link") Link Pembelian
-                  input#purchase_link.form-control(type="url" name="purchase_link" placeholder="https://...")
-                .col-12.mb-4
-                  label.form-label(for="replacement_inventory_id") Pengganti Inventaris Rusak / Maintenance
-                  select#replacement_inventory_id.form-select(name="replacement_inventory_id")
-                    option(value="") Tidak mengganti inventaris lama
-                    if damagedInventories && damagedInventories.length > 0
-                      each inventory in damagedInventories
-                        option(value=inventory.id)= `${inventory.label_number || '-'} - ${inventory.name} (${inventory.condition})`
-              button.btn.btn-primary(type="submit")
+      .card
+        .card-body
+          .d-flex.justify-content-between.align-items-center.mb-4
+            h5.card-title.fw-semibold.mb-0 Daftar Item Pengadaan
+            if !locked
+              button.btn.btn-primary.btn-sm(type="button" data-bs-toggle="modal" data-bs-target="#addItemModal")
                 i.ti.ti-plus.me-1
                 | Tambah Item
 
-      .card
-        .card-body
-          h5.card-title.fw-semibold.mb-4 Daftar Item Pengadaan
           .table-responsive
             table.table.align-middle.text-nowrap.mb-0
               thead.text-dark.fs-4
@@ -116,6 +99,8 @@ block content
                   th.border-bottom-0.fw-semibold Harga
                   th.border-bottom-0.fw-semibold Link
                   th.border-bottom-0.fw-semibold Pengganti
+                  if draft.status !== 'Draft'
+                    th.border-bottom-0.fw-semibold Status Item
                   if !locked
                     th.border-bottom-0.fw-semibold.text-center Aksi
               tbody
@@ -140,6 +125,20 @@ block content
                           span.text-wrap.d-inline-block(style="max-width: 220px;")= item.replacementInventory.name
                         else
                           span.text-muted -
+                      if draft.status !== 'Draft'
+                        td.border-bottom-0
+                          if item.status === 'Approved'
+                            span.badge.bg-light-success.text-success.fw-semibold
+                              i.ti.ti-circle-check.me-1
+                              | Disetujui
+                          else if item.status === 'Rejected'
+                            span.badge.bg-light-danger.text-danger.fw-semibold
+                              i.ti.ti-circle-x.me-1
+                              | Ditolak
+                          else
+                            span.badge.bg-light-warning.text-warning.fw-semibold
+                              i.ti.ti-help.me-1
+                              | Menunggu Review
                       if !locked
                         td.border-bottom-0.text-center
                           .d-flex.justify-content-center.gap-2
@@ -150,4 +149,47 @@ block content
                                 i.ti.ti-trash
                 else
                   tr
-                    td.text-center.py-4(colspan=(locked ? 7 : 8)) Belum ada item pengadaan.
+                    td.text-center.py-4(colspan=(draft.status !== 'Draft' ? (locked ? 8 : 9) : (locked ? 7 : 8))) Belum ada item pengadaan.
+
+  if !locked
+    // Add Item Modal
+    #addItemModal.modal.fade(tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true")
+      .modal-dialog.modal-lg.modal-dialog-centered
+        .modal-content
+          .modal-header
+            h5#addItemModalLabel.modal-title.fw-semibold Tambah Item Pengadaan
+            button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
+          form(action=`/procurement-drafts/${draft.id}/items` method="POST")
+            .modal-body
+              .row
+                .col-md-6.mb-3
+                  label.form-label(for="item_type") Jenis Barang
+                  select#item_type.form-select(name="item_type" required)
+                    option(value="" disabled selected) -- Pilih Jenis --
+                    option(value="Inventaris") Inventaris
+                    option(value="BHP") Barang Habis Pakai
+                .col-md-6.mb-3
+                  label.form-label(for="item_name") Nama Barang
+                  input#item_name.form-control(type="text" name="item_name" placeholder="Contoh: Oscilloscope / Kabel jumper" required)
+                .col-md-6.mb-3
+                  label.form-label(for="quantity") Jumlah
+                  input#quantity.form-control(type="number" name="quantity" min="1" required)
+                .col-md-6.mb-3
+                  label.form-label(for="price") Harga Satuan
+                  input#price.form-control(type="number" name="price" min="0" required)
+                .col-12.mb-3
+                  label.form-label(for="purchase_link") Link Pembelian
+                  input#purchase_link.form-control(type="url" name="purchase_link" placeholder="https://...")
+                .col-12.mb-0
+                  label.form-label(for="replacement_inventory_id") Pengganti Inventaris Rusak / Maintenance
+                  select#replacement_inventory_id.form-select(name="replacement_inventory_id")
+                    option(value="") Tidak mengganti inventaris lama
+                    if damagedInventories && damagedInventories.length > 0
+                      each inventory in damagedInventories
+                        option(value=inventory.id)= `${inventory.label_number || '-'} - ${inventory.name} (${inventory.condition})`
+            .modal-footer
+              button.btn.btn-outline-secondary(type="button" data-bs-dismiss="modal") Batal
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-plus.me-1
+                | Tambah Item
+

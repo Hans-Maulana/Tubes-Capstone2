@@ -1,0 +1,171 @@
+extends ../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8= `Review Draf Pengadaan ${draft.year}`
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/procurement-drafts-history") Review Pengadaan
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Detail
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if success
+    .alert.alert-success.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-check-circle.me-2
+      strong Sukses! 
+      = success
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  if draft.status === 'Submitted'
+    .alert.alert-warning.alert-dismissible.fade.show(role="alert")
+      i.ti.ti-alert-circle.me-2
+      strong Perhatian! 
+      | Draf sedang menunggu Kepala Laboratorium melakukan pengajuan finalisasi. Anda dapat memeriksa item untuk persiapan review lebih lanjut.
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-4
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-3 Ringkasan Draf
+          .mb-3
+            p.mb-1.text-muted Tahun Pengadaan
+            h6.fw-semibold.mb-0= draft.year
+          .mb-3
+            p.mb-1.text-muted Diajukan Oleh
+            h6.fw-semibold.mb-0= draft.labHead ? draft.labHead.name : '-'
+          .mb-3
+            p.mb-1.text-muted Status Draf
+            if draft.status === 'Submitted'
+              span.badge.bg-warning.rounded-3.fw-semibold Menunggu Finalisasi dari Kalab
+            else if draft.status === 'Locked'
+              span.badge.bg-info.rounded-3.fw-semibold Siap untuk Review
+            else if draft.status === 'Approved'
+              span.badge.bg-success.rounded-3.fw-semibold Disetujui
+            else if draft.status === 'Rejected'
+              span.badge.bg-danger.rounded-3.fw-semibold Ditolak
+            else
+              span.badge.bg-secondary.rounded-3.fw-semibold= draft.status
+          .mb-3
+            p.mb-1.text-muted Jumlah Item
+            h6.fw-semibold.mb-0= draft.items ? draft.items.length : 0
+
+      if draft.status === 'Locked'
+        .card
+          .card-body
+            h5.card-title.fw-semibold.mb-3 Finalisasi Draf
+            p.text-muted.small Lakukan finalisasi draf setelah memeriksa seluruh item di tabel sebelah kanan.
+            
+            - const totalItems = draft.items ? draft.items.length : 0
+            - const reviewedItems = draft.items ? draft.items.filter(i => i.status === 'Approved' || i.status === 'Rejected').length : 0
+            - const allReviewed = totalItems > 0 && reviewedItems === totalItems
+
+            .progress.mb-3(style="height: 10px;")
+              .progress-bar.bg-primary(role="progressbar" style=`width: ${(reviewedItems / (totalItems || 1)) * 100}%` aria-valuenow=reviewedItems aria-valuemin="0" aria-valuemax=totalItems)
+            p.small.mb-3= `${reviewedItems} dari ${totalItems} item selesai diperiksa`
+
+            if !allReviewed
+              .alert.alert-warning.small.mb-0
+                i.ti.ti-alert-circle.me-1
+                | Harap setujui atau tolak semua item terlebih dahulu untuk memfinalisasi draf ini.
+            else
+              .d-flex.flex-column.gap-2
+                form(action=`/procurement-drafts-history/${draft.id}/finalize` method="POST" onsubmit="return confirm('Apakah Anda yakin ingin MENYETUJUI draf pengadaan ini secara keseluruhan?')")
+                  input(type="hidden" name="decision" value="Approved")
+                  button.btn.btn-success.w-100(type="submit")
+                    i.ti.ti-check.me-1
+                    | Setujui Draf (Final)
+                
+                form(action=`/procurement-drafts-history/${draft.id}/finalize` method="POST" onsubmit="return confirm('Apakah Anda yakin ingin MENOLAK draf pengadaan ini secara keseluruhan?')")
+                  input(type="hidden" name="decision" value="Rejected")
+                  button.btn.btn-danger.w-100(type="submit")
+                    i.ti.ti-x.me-1
+                    | Tolak Draf (Final)
+      else if draft.status === 'Submitted'
+        .card
+          .card-body
+            h5.card-title.fw-semibold.mb-3 Status Review
+            
+            - const totalItems = draft.items ? draft.items.length : 0
+            - const reviewedItems = draft.items ? draft.items.filter(i => i.status === 'Approved' || i.status === 'Rejected').length : 0
+
+            .progress.mb-3(style="height: 10px;")
+              .progress-bar.bg-primary(role="progressbar" style=`width: ${(reviewedItems / (totalItems || 1)) * 100}%` aria-valuenow=reviewedItems aria-valuemin="0" aria-valuemax=totalItems)
+            p.small.mb-3= `${reviewedItems} dari ${totalItems} item sudah direview`
+            
+            .alert.alert-info.small.mb-0.d-flex.align-items-center.gap-2
+              i.ti.ti-info-circle.fs-5
+              span Mulai review item di tabel sebelah kanan. Setelah Kepala Laboratorium melakukan Pengajuan Finalisasi, Anda dapat menyelesaikan proses finalisasi draf.
+
+    .col-lg-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Daftar Item Pengadaan
+          .table-responsive
+            table.table.align-middle.text-nowrap.mb-0
+              thead.text-dark.fs-4
+                tr
+                  th.border-bottom-0.fw-semibold No
+                  th.border-bottom-0.fw-semibold Jenis
+                  th.border-bottom-0.fw-semibold Nama Barang
+                  th.border-bottom-0.fw-semibold Qty
+                  th.border-bottom-0.fw-semibold Harga
+                  th.border-bottom-0.fw-semibold Status Item
+                  if draft.status === 'Locked' || draft.status === 'Submitted'
+                    th.border-bottom-0.fw-semibold.text-center Aksi Review
+              tbody
+                if draft.items && draft.items.length > 0
+                  each item, index in draft.items
+                    tr
+                      td.border-bottom-0= index + 1
+                      td.border-bottom-0
+                        span.badge.bg-light-primary.text-primary.fw-semibold= item.item_type || '-'
+                      td.border-bottom-0
+                        h6.fw-semibold.mb-0.text-wrap(style="max-width: 180px;")= item.item_name || '-'
+                        if item.purchase_link
+                          a.small.d-block.text-primary.text-decoration-underline(href=item.purchase_link target="_blank") Link Pembelian
+                        if item.replacementInventory
+                          span.small.text-muted.d-block= `Mengganti: ${item.replacementInventory.name}`
+                      td.border-bottom-0= item.quantity || 0
+                      td.border-bottom-0= `Rp ${Number(item.price || 0).toLocaleString('id-ID')}`
+                      td.border-bottom-0
+                        if item.status === 'Approved'
+                          span.badge.bg-light-success.text-success.fw-semibold
+                            i.ti.ti-circle-check.me-1
+                            | Disetujui
+                        else if item.status === 'Rejected'
+                          span.badge.bg-light-danger.text-danger.fw-semibold
+                            i.ti.ti-circle-x.me-1
+                            | Ditolak
+                        else
+                          span.badge.bg-light-warning.text-warning.fw-semibold
+                            i.ti.ti-help.me-1
+                            | Belum Direview
+                      if draft.status === 'Locked' || draft.status === 'Submitted'
+                        td.border-bottom-0.text-center
+                          .d-flex.justify-content-center.gap-1
+                            form(action=`/procurement-drafts-history/${draft.id}/items/${item.id}/approve` method="POST")
+                              button.btn.btn-sm.btn-success.d-inline-flex.align-items-center(type="submit" title="Setujui Item" disabled=(item.status === 'Approved'))
+                                i.ti.ti-check.fs-4
+                            form(action=`/procurement-drafts-history/${draft.id}/items/${item.id}/reject` method="POST")
+                              button.btn.btn-sm.btn-danger.d-inline-flex.align-items-center(type="submit" title="Tolak Item" disabled=(item.status === 'Rejected'))
+                                i.ti.ti-x.fs-4
+                else
+                  tr
+                    td.text-center.py-4(colspan=(draft.status === 'Locked' || draft.status === 'Submitted' ? 7 : 6)) Belum ada item pengadaan.

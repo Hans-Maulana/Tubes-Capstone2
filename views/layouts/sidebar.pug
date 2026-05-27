@@ -24,22 +24,22 @@ aside.left-sidebar
         if user && user.role === 'Kepala Laboratorium'
           li.nav-small-cap
             iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
-            span.hide-menu Inventaris
-
-          li.sidebar-item
-            a.sidebar-link(href="/rooms" aria-expanded="false")
-              i.ti.ti-door
-              span.hide-menu Ruangan Lab
-
-          li.nav-small-cap
-            iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
             span.hide-menu Pengadaan & Penerimaan
             
           li.sidebar-item
             a.sidebar-link(href="/procurement-drafts" aria-expanded="false")
               i.ti.ti-file-description
               span.hide-menu Draf Pengadaan
-
+        
+        if user && user.role === 'Ketua Program Studi'
+          li.nav-small-cap
+            iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
+            span.hide-menu Validasi Pengadaan
+          li.sidebar-item
+            a.sidebar-link(href="/procurement-drafts-history" aria-expanded="false")
+              i.ti.ti-file-check
+              span.hide-menu Review Pengadaan
+        
         if user && user.role === 'Administrator'
           li.nav-small-cap
             iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")

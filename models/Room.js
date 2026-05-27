@@ -11,6 +11,10 @@ const Room = sequelize.define('Room', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  code: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   location: {
     type: DataTypes.STRING,
     allowNull: true
