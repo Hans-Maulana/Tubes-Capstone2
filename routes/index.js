@@ -10,6 +10,8 @@ const authCheck = require('../middlewares/authCheck');
 const adminCheck = require('../middlewares/adminCheck');
 const adminStaffCheck = require('../middlewares/adminStaffCheck');
 const roleCheck = require('../middlewares/roleCheck');
+const staffLabController = require('../controllers/staffLabController');
+const inventoryController = require('../controllers/inventoryController');
 
 // Define main/landing route
 // router.get('/', homeController.getHome);
@@ -19,6 +21,7 @@ router.get('/inventory-label/:label', administrationController.getInventoryByLab
 // Secure Dashboard Route protected by authCheck middleware
 router.get('/', authCheck, dashboardController.getDashboard);
 router.get('/dashboard', authCheck, dashboardController.getDashboard);
+router.get('/inventories', authCheck, inventoryController.getInventories);
 
 // --- User Management Routes (Administrator Only) ---
 router.get('/users', authCheck, adminCheck, userController.getUsers);
@@ -70,5 +73,17 @@ router.post('/administration/inventories', authCheck, adminStaffCheck, administr
 router.get('/administration/inventories/:id/edit', authCheck, adminStaffCheck, administrationController.getEditInventory);
 router.post('/administration/inventories/:id/edit', authCheck, adminStaffCheck, administrationController.postUpdateInventory);
 router.post('/administration/inventories/:id/delete', authCheck, adminStaffCheck, administrationController.postDeleteInventory);
+
+// --- Staff Laboratorium Routes ---
+router.get('/stafflab/bhps', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getBhps);
+router.get('/stafflab/bhps/create', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getCreateBhp);
+router.post('/stafflab/bhps', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postCreateBhp);
+router.get('/stafflab/bhps/:id/edit', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getEditBhp);
+router.post('/stafflab/bhps/:id/edit', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postUpdateBhp);
+router.post('/stafflab/bhps/:id/delete', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postDeleteBhp);
+
+router.get('/stafflab/maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getMaintenanceLogs);
+router.get('/stafflab/maintenance/create', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getCreateMaintenanceLog);
+router.post('/stafflab/maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postCreateMaintenanceLog);
 
 module.exports = router;

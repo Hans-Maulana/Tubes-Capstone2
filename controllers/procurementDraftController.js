@@ -82,18 +82,6 @@ exports.postCreateDraft = async (req, res, next) => {
       });
     }
 
-    const existingDraft = await ProcurementDraft.findOne({
-      where: {
-        lab_head_id: req.session.user.id,
-        year: selectedYear
-      }
-    });
-
-    if (existingDraft) {
-      req.session.error = `Draf pengadaan tahun ${selectedYear} sudah ada.`;
-      return res.redirect('/procurement-drafts');
-    }
-
     const draft = await ProcurementDraft.create({
       lab_head_id: req.session.user.id,
       year: selectedYear,

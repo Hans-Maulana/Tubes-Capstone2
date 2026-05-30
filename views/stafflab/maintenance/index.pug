@@ -1,0 +1,94 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Log Maintenance & Pemeliharaan Inventaris
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Log Maintenance
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  //- Success & Error Alerts
+  if success
+    .alert.alert-success.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-check-circle.me-2
+      strong Sukses! 
+      = success
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-12
+      .card.w-100
+        .card-body
+          .d-flex.align-items-center.justify-content-between.mb-4
+            div
+              h5.card-title.fw-semibold.mb-0 Log Pemeliharaan
+              p.card-subtitle.mb-0 Catatan riwayat perawatan, perbaikan, dan penggunaan BHP selama maintenance alat inventaris.
+            a.btn.btn-primary.d-flex.align-items-center.gap-2(href="/stafflab/maintenance/create")
+              i.ti.ti-plus.fs-5
+              | Catat Log Maintenance
+
+          .table-responsive.mt-4
+            table.table.align-middle.text-nowrap.mb-0
+              thead.text-dark.fs-4
+                tr
+                  th.border-bottom-0.fw-semibold No
+                  th.border-bottom-0.fw-semibold Tanggal
+                  th.border-bottom-0.fw-semibold Inventaris
+                  th.border-bottom-0.fw-semibold Deskripsi / Tindakan
+                  th.border-bottom-0.fw-semibold Kondisi Baru
+                  th.border-bottom-0.fw-semibold BHP Digunakan
+                  th.border-bottom-0.fw-semibold Petugas (Staf)
+              tbody
+                if logs && logs.length > 0
+                  each log, index in logs
+                    tr
+                      td.border-bottom-0
+                        h6.fw-normal.mb-0= index + 1
+                      td.border-bottom-0
+                        span.fw-normal= log.date ? new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'
+                      td.border-bottom-0
+                        if log.inventory
+                          h6.fw-semibold.mb-1= log.inventory.name
+                          span.badge.bg-light-secondary.text-secondary.fw-semibold= log.inventory.label_number
+                        else
+                          span.text-muted - (Terhapus)
+                      td.border-bottom-0
+                        p.mb-0.fw-normal.text-wrap(style="max-width: 300px; font-size: 0.9rem;")= log.description
+                      td.border-bottom-0
+                        if log.inventory
+                          if log.inventory.condition === 'Baik'
+                            span.badge.bg-success.rounded-3.fw-semibold Baik
+                          else if log.inventory.condition === 'Maintenance'
+                            span.badge.bg-warning.rounded-3.fw-semibold Maintenance
+                          else
+                            span.badge.bg-danger.rounded-3.fw-semibold Rusak
+                        else
+                          span.text-muted -
+                      td.border-bottom-0
+                        if log.bhpUsed
+                          span.badge.bg-light-warning.text-warning.fw-semibold.d-inline-flex.align-items-center.gap-1
+                            i.ti.ti-archive
+                            = `${log.bhpUsed.name} (${log.bhp_quantity_used} ${log.bhpUsed.unit})`
+                        else
+                          span.text-muted - (Tidak menggunakan BHP)
+                      td.border-bottom-0
+                        span.fw-semibold= log.staffLab ? log.staffLab.name : '-'
+                else
+                  tr
+                    td.text-center.py-4(colspan="7") Belum ada data log maintenance.

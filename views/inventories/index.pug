@@ -1,0 +1,95 @@
+extends ../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Daftar Inventaris Laboratorium
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Daftar Inventaris
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  .row
+    .col-12
+      .card.w-100
+        .card-body
+          .d-flex.align-items-center.justify-content-between.mb-4
+            div
+              h5.card-title.fw-semibold.mb-0 Semua Inventaris Berlabel
+              p.card-subtitle.mb-0 Melihat seluruh data barang inventaris yang terdaftar di dalam laboratorium.
+            
+          //- Filter Form
+          form(method="GET" action="/inventories" class="row g-3 mb-4 align-items-end border p-3 rounded bg-light")
+            .col-md-4
+              label.form-label.fw-semibold Ruangan
+              select.form-select(name="room_id")
+                option(value="") -- Semua Ruangan --
+                each room in (rooms || [])
+                  option(value=room.id selected=(String(selectedRoomId) === String(room.id)))= room.name
+            .col-md-4
+              label.form-label.fw-semibold Tahun Pengadaan
+              select.form-select(name="year")
+                option(value="") -- Semua Tahun --
+                each y in (years || [])
+                  option(value=y selected=(String(selectedYear) === String(y)))= y
+            .col-md-4.d-flex.gap-2
+              button.btn.btn-primary.w-100(type="submit")
+                i.ti.ti-filter.me-1
+                | Filter
+              a.btn.btn-outline-secondary.w-100(href="/inventories")
+                i.ti.ti-refresh.me-1
+                | Reset
+
+          .table-responsive.mt-4
+            table.table.align-middle.text-nowrap.mb-0
+              thead.text-dark.fs-4
+                tr
+                  th.border-bottom-0.fw-semibold No
+                  th.border-bottom-0.fw-semibold Nomor Label
+                  th.border-bottom-0.fw-semibold Nama Barang
+                  th.border-bottom-0.fw-semibold Kategori
+                  th.border-bottom-0.fw-semibold Tahun
+                  th.border-bottom-0.fw-semibold Ruangan
+                  th.border-bottom-0.fw-semibold Kondisi
+                  th.border-bottom-0.fw-semibold.text-center QR / Detail
+              tbody
+                if inventories && inventories.length > 0
+                  each inv, index in inventories
+                    tr
+                      td.border-bottom-0
+                        h6.fw-normal.mb-0= index + 1
+                      td.border-bottom-0
+                        h6.fw-semibold.mb-0= inv.label_number || '-'
+                      td.border-bottom-0
+                        h6.fw-semibold.mb-0= inv.name || (inv.procurementItem ? inv.procurementItem.item_name : '-')
+                      td.border-bottom-0
+                        span.badge.bg-light-primary.text-primary.fw-semibold= inv.category || '-'
+                      td.border-bottom-0= inv.procurementItem && inv.procurementItem.draft ? inv.procurementItem.draft.year : '-'
+                      td.border-bottom-0
+                        span.badge.bg-light-secondary.text-secondary.fw-semibold= inv.room ? inv.room.name : '-'
+                      td.border-bottom-0
+                        if inv.condition === 'Baik'
+                          span.badge.bg-success.rounded-3.fw-semibold Baik
+                        else if inv.condition === 'Maintenance'
+                          span.badge.bg-warning.rounded-3.fw-semibold Maintenance
+                        else
+                          span.badge.bg-danger.rounded-3.fw-semibold Rusak
+                      td.border-bottom-0.text-center
+                        if inv.qr_image_path
+                          img.rounded.border.me-2(src=inv.qr_image_path alt=`QR ${inv.label_number}` style="width: 40px; height: 40px; object-fit: cover;")
+                          a.btn.btn-sm.btn-outline-primary(href=`/inventory-label/${encodeURIComponent(inv.label_number)}` target="_blank")
+                            i.ti.ti-file-search.me-1
+                            | Detail QR
+                        else
+                          span.text-muted -
+                else
+                  tr
+                    td.text-center.py-4(colspan="8") Belum ada data inventaris berlabel yang sesuai dengan filter.

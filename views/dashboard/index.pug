@@ -104,6 +104,396 @@ block content
               a.btn.btn-outline-success.d-flex.align-items-center.gap-2.py-3.px-4(href="/administration/inventories")
                 i.ti.ti-qrcode.fs-5
                 | Input Inventaris & QR
+  else if staffLabDashboard
+    //- Statistics Cards Row
+    .row
+      .col-sm-6.col-xl-3
+        .card.bg-light-primary.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-primary.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-package.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Total Inventaris
+                h4.fw-semibold.mb-0= stats ? stats.totalInventories : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-warning.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-warning.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-archive.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Barang Habis Pakai
+                h4.fw-semibold.mb-0= stats ? stats.totalBhps : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-success.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-success.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-door.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Ruangan Lab
+                h4.fw-semibold.mb-0= stats ? stats.totalRooms : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-danger.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-danger.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-tool.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Log Pemeliharaan
+                h4.fw-semibold.mb-0= stats ? stats.totalLogs : 0
+
+    //- Recent Maintenance Logs & Quick Actions
+    .row.mt-4
+      .col-lg-8.d-flex.align-items-stretch
+        .card.w-100
+          .card-body
+            .d-flex.align-items-center.justify-content-between.mb-9
+              .mb-3
+                h5.card-title.fw-semibold Log Maintenance Terbaru
+                p.card-subtitle.mb-0 Aktivitas pemeliharaan alat yang baru saja dilakukan.
+              a.btn.btn-sm.btn-primary(href="/stafflab/maintenance") Lihat Semua
+            .table-responsive.mt-4
+              table.table.align-middle.text-nowrap.mb-0
+                thead.text-dark.fs-4
+                  tr
+                    th.border-bottom-0 Tanggal
+                    th.border-bottom-0 Inventaris
+                    th.border-bottom-0 Deskripsi
+                    th.border-bottom-0 BHP Digunakan
+                tbody
+                  if recentLogs && recentLogs.length > 0
+                    each log in recentLogs
+                      tr
+                        td.border-bottom-0
+                          span.fw-normal= log.date ? new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'
+                        td.border-bottom-0
+                          h6.fw-semibold.mb-0= log.inventory ? log.inventory.name : '-'
+                          span.badge.bg-light-secondary.text-secondary= log.inventory ? log.inventory.label_number : '-'
+                        td.border-bottom-0
+                          p.mb-0.fw-normal.text-wrap(style="max-width: 250px;")= log.description
+                        td.border-bottom-0
+                          if log.bhpUsed
+                            span.badge.bg-light-warning.text-warning= `${log.bhpUsed.name} (${log.bhp_quantity_used} ${log.bhpUsed.unit})`
+                          else
+                            span.text-muted -
+                  else
+                    tr
+                      td.text-center.py-4(colspan="4") Belum ada log pemeliharaan.
+
+      .col-lg-4.d-flex.align-items-stretch
+        .card.w-100
+          .card-body
+            h5.card-title.fw-semibold Tindakan Cepat
+            p.card-subtitle Akses cepat ke modul staf laboratorium.
+            .d-grid.gap-2.mt-4
+              a.btn.btn-outline-primary.d-flex.align-items-center.gap-2.py-3.px-4(href="/stafflab/bhps")
+                i.ti.ti-archive.fs-5
+                | Kelola Stok BHP
+              a.btn.btn-outline-success.d-flex.align-items-center.gap-2.py-3.px-4(href="/stafflab/maintenance/create")
+                i.ti.ti-tool.fs-5
+                | Catat Log Maintenance
+
+            if lowStockBhps && lowStockBhps.length > 0
+              h6.fw-semibold.mt-4.mb-2.text-danger.d-flex.align-items-center.gap-1
+                i.ti.ti-alert-circle
+                | Peringatan Stok BHP Tipis
+              ul.list-group
+                each bhp in lowStockBhps
+                  li.list-group-item.d-flex.justify-content-between.align-items-center.p-2
+                    span.small= bhp.name
+                    span.badge.bg-light-danger.text-danger.rounded-pill= `${bhp.stock} ${bhp.unit}`
+  else if kaprodiDashboard
+    //- Statistics Cards Row
+    .row
+      .col-sm-6.col-xl-3
+        .card.bg-light-warning.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-warning.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-file-description.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Draf Butuh Review
+                h4.fw-semibold.mb-0= stats ? stats.pendingDrafts : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-success.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-success.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-file-check.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Draf Disetujui
+                h4.fw-semibold.mb-0= stats ? stats.approvedDrafts : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-primary.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-primary.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-package.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Total Inventaris
+                h4.fw-semibold.mb-0= stats ? stats.totalInventories : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-danger.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-danger.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-archive.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Barang Habis Pakai
+                h4.fw-semibold.mb-0= stats ? stats.totalBhps : 0
+
+    //- Recent Submitted Drafts & Quick Actions
+    .row.mt-4
+      .col-lg-8.d-flex.align-items-stretch
+        .card.w-100
+          .card-body
+            .d-flex.align-items-center.justify-content-between.mb-9
+              .mb-3
+                h5.card-title.fw-semibold Pengajuan Draf Pengadaan Terbaru
+                p.card-subtitle.mb-0 Draf pengadaan dari Kepala Laboratorium yang diajukan untuk divalidasi.
+              a.btn.btn-sm.btn-primary(href="/procurement-drafts-history") Lihat Semua
+            .table-responsive.mt-4
+              table.table.align-middle.text-nowrap.mb-0
+                thead.text-dark.fs-4
+                  tr
+                    th.border-bottom-0 Tahun
+                    th.border-bottom-0 Kepala Lab
+                    th.border-bottom-0 Status
+                    th.border-bottom-0.text-center Aksi
+                tbody
+                  if recentSubmittedDrafts && recentSubmittedDrafts.length > 0
+                    each draft in recentSubmittedDrafts
+                      tr
+                        td.border-bottom-0
+                          h6.fw-semibold.mb-0= draft.year
+                        td.border-bottom-0= draft.labHead ? draft.labHead.name : '-'
+                        td.border-bottom-0
+                          if draft.status === 'Submitted'
+                            span.badge.bg-warning.rounded-3.fw-semibold Diajukan
+                          else if draft.status === 'Locked'
+                            span.badge.bg-info.rounded-3.fw-semibold Menunggu Finalisasi
+                          else if draft.status === 'Approved'
+                            span.badge.bg-success.rounded-3.fw-semibold Disetujui
+                          else if draft.status === 'Rejected'
+                            span.badge.bg-danger.rounded-3.fw-semibold Ditolak
+                          else
+                            span.badge.bg-secondary.rounded-3.fw-semibold= draft.status
+                        td.border-bottom-0.text-center
+                          a.btn.btn-sm.btn-outline-primary(href=`/procurement-drafts-history/${draft.id}`)
+                            i.ti.ti-file-search.me-1
+                            | Review
+                  else
+                    tr
+                      td.text-center.py-4(colspan="4") Belum ada draf pengadaan yang diajukan.
+
+      .col-lg-4.d-flex.align-items-stretch
+        .card.w-100
+          .card-body
+            h5.card-title.fw-semibold Tindakan Cepat
+            p.card-subtitle Akses cepat ke modul Ketua Program Studi.
+            .d-grid.gap-2.mt-4
+              a.btn.btn-outline-primary.d-flex.align-items-center.gap-2.py-3.px-4(href="/procurement-drafts-history")
+                i.ti.ti-file-check.fs-5
+                | Validasi & Review Pengadaan
+              a.btn.btn-outline-success.d-flex.align-items-center.gap-2.py-3.px-4(href="/inventories")
+                i.ti.ti-package.fs-5
+                | Lihat Semua Inventaris
+  else if labHeadDashboard
+    //- Statistics Cards Row
+    .row
+      .col-sm-6.col-xl-3
+        .card.bg-light-primary.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-primary.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-file-description.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Total Draf Pengadaan
+                h4.fw-semibold.mb-0= stats ? stats.totalDrafts : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-warning.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-warning.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-file-check.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Draf Diajukan/Selesai
+                h4.fw-semibold.mb-0= stats ? stats.submittedDrafts : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-success.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-success.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-package.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Total Inventaris
+                h4.fw-semibold.mb-0= stats ? stats.totalInventories : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-danger.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-danger.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-archive.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Barang Habis Pakai
+                h4.fw-semibold.mb-0= stats ? stats.totalBhps : 0
+
+    //- Recent Drafts & Quick Actions
+    .row.mt-4
+      .col-lg-8.d-flex.align-items-stretch
+        .card.w-100
+          .card-body
+            .d-flex.align-items-center.justify-content-between.mb-9
+              .mb-3
+                h5.card-title.fw-semibold Draf Pengadaan Terbaru Saya
+                p.card-subtitle.mb-0 Daftar usulan pengadaan barang inventaris dan BHP yang pernah Anda buat.
+              a.btn.btn-sm.btn-primary(href="/procurement-drafts") Lihat Semua
+            .table-responsive.mt-4
+              table.table.align-middle.text-nowrap.mb-0
+                thead.text-dark.fs-4
+                  tr
+                    th.border-bottom-0 Tahun
+                    th.border-bottom-0 Jumlah Item
+                    th.border-bottom-0 Status
+                    th.border-bottom-0.text-center Aksi
+                tbody
+                  if myDrafts && myDrafts.length > 0
+                    each draft in myDrafts
+                      tr
+                        td.border-bottom-0
+                          h6.fw-semibold.mb-0= draft.year
+                        td.border-bottom-0= draft.items ? draft.items.length : 0
+                        td.border-bottom-0
+                          if draft.status === 'Draft'
+                            span.badge.bg-light-secondary.text-secondary.rounded-3.fw-semibold Draft
+                          else if draft.status === 'Submitted'
+                            span.badge.bg-warning.rounded-3.fw-semibold Diajukan
+                          else if draft.status === 'Locked'
+                            span.badge.bg-info.rounded-3.fw-semibold Menunggu Finalisasi
+                          else if draft.status === 'Approved'
+                            span.badge.bg-success.rounded-3.fw-semibold Disetujui
+                          else if draft.status === 'Rejected'
+                            span.badge.bg-danger.rounded-3.fw-semibold Ditolak
+                          else
+                            span.badge.bg-secondary.rounded-3.fw-semibold= draft.status
+                        td.border-bottom-0.text-center
+                          a.btn.btn-sm.btn-outline-primary(href=`/procurement-drafts/${draft.id}`)
+                            i.ti.ti-file-search.me-1
+                            | Detail
+                  else
+                    tr
+                      td.text-center.py-4(colspan="4") Belum ada draf pengadaan yang dibuat.
+
+      .col-lg-4.d-flex.align-items-stretch
+        .card.w-100
+          .card-body
+            h5.card-title.fw-semibold Tindakan Cepat
+            p.card-subtitle Akses cepat ke modul Kepala Laboratorium.
+            .d-grid.gap-2.mt-4
+              a.btn.btn-outline-primary.d-flex.align-items-center.gap-2.py-3.px-4(href="/procurement-drafts/create")
+                i.ti.ti-file-plus.fs-5
+                | Buat Draf Pengadaan Baru
+              a.btn.btn-outline-success.d-flex.align-items-center.gap-2.py-3.px-4(href="/procurement-drafts")
+                i.ti.ti-clipboard-list.fs-5
+                | Kelola Draf Pengadaan
+              a.btn.btn-outline-warning.d-flex.align-items-center.gap-2.py-3.px-4(href="/inventories")
+                i.ti.ti-package.fs-5
+                | Lihat Semua Inventaris
+  else if superAdminDashboard
+    //- Statistics Cards Row
+    .row
+      .col-sm-6.col-xl-3
+        .card.bg-light-primary.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-primary.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-users.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Total Pengguna
+                h4.fw-semibold.mb-0= stats ? stats.totalUsers : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-success.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-success.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-door.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Ruangan Lab
+                h4.fw-semibold.mb-0= stats ? stats.totalRooms : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-warning.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-warning.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-package.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Total Inventaris
+                h4.fw-semibold.mb-0= stats ? stats.totalInventories : 0
+      .col-sm-6.col-xl-3
+        .card.bg-light-danger.shadow-none
+          .card-body.p-4
+            .d-flex.align-items-center
+              .bg-danger.text-white.rounded-circle.p-6.d-flex.align-items-center.justify-content-center(style="width: 48px; height: 48px;")
+                i.ti.ti-archive.fs-6
+              .ms-3
+                h6.mb-0.text-muted.small Barang Habis Pakai
+                h4.fw-semibold.mb-0= stats ? stats.totalBhps : 0
+
+    //- Recent Users & Quick Actions
+    .row.mt-4
+      .col-lg-8.d-flex.align-items-stretch
+        .card.w-100
+          .card-body
+            .d-flex.align-items-center.justify-content-between.mb-9
+              .mb-3
+                h5.card-title.fw-semibold Pengguna Baru Terdaftar
+                p.card-subtitle.mb-0 Pengguna sistem inventaris laboratorium yang baru saja ditambahkan.
+              a.btn.btn-sm.btn-primary(href="/users") Lihat Semua
+            .table-responsive.mt-4
+              table.table.align-middle.text-nowrap.mb-0
+                thead.text-dark.fs-4
+                  tr
+                    th.border-bottom-0 Nama Pengguna
+                    th.border-bottom-0 Email
+                    th.border-bottom-0 Peran (Role)
+                    th.border-bottom-0.text-center Aksi
+                tbody
+                  if recentUsers && recentUsers.length > 0
+                    each usr in recentUsers
+                      tr
+                        td.border-bottom-0
+                          h6.fw-semibold.mb-0= usr.name
+                        td.border-bottom-0= usr.email
+                        td.border-bottom-0
+                          span.badge.bg-light-primary.text-primary.fw-semibold= usr.role ? usr.role.name : '-'
+                        td.border-bottom-0.text-center
+                          a.btn.btn-sm.btn-outline-primary(href=`/users/edit/${usr.id}`)
+                            i.ti.ti-edit
+                            | Kelola
+                  else
+                    tr
+                      td.text-center.py-4(colspan="4") Belum ada pengguna terdaftar.
+
+      .col-lg-4.d-flex.align-items-stretch
+        .card.w-100
+          .card-body
+            h5.card-title.fw-semibold Tindakan Cepat
+            p.card-subtitle Akses cepat ke modul Administrator.
+            .d-grid.gap-2.mt-4
+              a.btn.btn-outline-primary.d-flex.align-items-center.gap-2.py-3.px-4(href="/users/create")
+                i.ti.ti-user-plus.fs-5
+                | Tambah Pengguna Baru
+              a.btn.btn-outline-success.d-flex.align-items-center.gap-2.py-3.px-4(href="/users")
+                i.ti.ti-users.fs-5
+                | Kelola Daftar Pengguna
+              a.btn.btn-outline-warning.d-flex.align-items-center.gap-2.py-3.px-4(href="/rooms/create")
+                i.ti.ti-door.fs-5
+                | Tambah Ruangan Baru
+              a.btn.btn-outline-danger.d-flex.align-items-center.gap-2.py-3.px-4(href="/rooms")
+                i.ti.ti-layout-grid.fs-5
+                | Kelola Data Ruangan
   else
     //- Statistics Cards Row
     .row

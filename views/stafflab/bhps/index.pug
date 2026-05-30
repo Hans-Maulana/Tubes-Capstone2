@@ -1,0 +1,83 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Kelola Stok Bahan Habis Pakai (BHP)
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Stok BHP
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  //- Success & Error Alerts
+  if success
+    .alert.alert-success.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-check-circle.me-2
+      strong Sukses! 
+      = success
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-12
+      .card.w-100
+        .card-body
+          .d-flex.align-items-center.justify-content-between.mb-4
+            div
+              h5.card-title.fw-semibold.mb-0 Daftar Bahan Habis Pakai
+              p.card-subtitle.mb-0 Mengelola persediaan barang yang habis dipakai untuk keperluan laboratorium.
+            a.btn.btn-primary.d-flex.align-items-center.gap-2(href="/stafflab/bhps/create")
+              i.ti.ti-plus.fs-5
+              | Tambah BHP Baru
+
+          .table-responsive.mt-4
+            table.table.align-middle.text-nowrap.mb-0
+              thead.text-dark.fs-4
+                tr
+                  th.border-bottom-0.fw-semibold No
+                  th.border-bottom-0.fw-semibold Nama BHP
+                  th.border-bottom-0.fw-semibold Satuan
+                  th.border-bottom-0.fw-semibold Stok Tersedia
+                  th.border-bottom-0.fw-semibold.text-center Aksi
+              tbody
+                if bhps && bhps.length > 0
+                  each bhp, index in bhps
+                    tr
+                      td.border-bottom-0
+                        h6.fw-normal.mb-0= index + 1
+                      td.border-bottom-0
+                        h6.fw-semibold.mb-0= bhp.name
+                      td.border-bottom-0
+                        span.badge.bg-light-secondary.text-secondary.fw-semibold= bhp.unit
+                      td.border-bottom-0
+                        if bhp.stock < 5
+                          span.badge.bg-light-danger.text-danger.fw-semibold= `${bhp.stock} (Kritis)`
+                        else if bhp.stock < 20
+                          span.badge.bg-light-warning.text-warning.fw-semibold= bhp.stock
+                        else
+                          span.badge.bg-light-success.text-success.fw-semibold= bhp.stock
+                      td.border-bottom-0.text-center
+                        .d-flex.justify-content-center.gap-2
+                          a.btn.btn-sm.btn-outline-warning.d-flex.align-items-center.gap-1(href=`/stafflab/bhps/${bhp.id}/edit`)
+                            i.ti.ti-edit
+                            | Ubah
+                          form(action=`/stafflab/bhps/${bhp.id}/delete` method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus BHP ini?')")
+                            button.btn.btn-sm.btn-outline-danger.d-flex.align-items-center.gap-1(type="submit")
+                              i.ti.ti-trash
+                              | Hapus
+                else
+                  tr
+                    td.text-center.py-4(colspan="5") Belum ada data Bahan Habis Pakai.

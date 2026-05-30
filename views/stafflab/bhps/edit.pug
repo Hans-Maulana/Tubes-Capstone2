@@ -1,0 +1,49 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Ubah Data BHP
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/stafflab/bhps") Stok BHP
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Ubah BHP
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-6
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Formulir Ubah BHP
+          form(action=`/stafflab/bhps/${bhp.id}/edit` method="POST")
+            .mb-3
+              label.form-label Nama Bahan Habis Pakai
+              input.form-control(type="text" name="name" value=bhp.name required autofocus)
+            .mb-3
+              label.form-label Satuan
+              input.form-control(type="text" name="unit" value=bhp.unit required)
+            .mb-3
+              label.form-label Stok
+              input.form-control(type="number" name="stock" value=bhp.stock min="0" required)
+              p.small.text-muted.mb-0 Update jumlah stok yang tersedia.
+            .d-flex.gap-2.mt-4
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-device-floppy.me-1
+                | Simpan Perubahan
+              a.btn.btn-outline-secondary(href="/stafflab/bhps") Batal

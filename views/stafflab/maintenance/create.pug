@@ -1,0 +1,129 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Catat Maintenance Baru
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/stafflab/maintenance") Log Maintenance
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Catat Maintenance
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error! 
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Formulir Pencatatan Pemeliharaan Alat
+          form(action="/stafflab/maintenance" method="POST" onsubmit="return confirm('Apakah Anda yakin data maintenance yang dimasukkan sudah benar?')")
+            .row
+              .col-md-6.mb-3
+                label.form-label Barang Inventaris
+                select.form-select(name="inventory_id" required autofocus)
+                  option(value="" disabled selected=(!formData.inventory_id)) -- Pilih Inventaris --
+                  each inv in (inventories || [])
+                    option(value=inv.id selected=(String(formData.inventory_id) === String(inv.id)) data-condition=inv.condition)
+                      = `${inv.label_number} - ${inv.name} [Kondisi: ${inv.condition}]`
+              
+              .col-md-6.mb-3
+                label.form-label Kondisi Baru Setelah Pemeliharaan
+                select.form-select(name="condition" required)
+                  - const currentCond = (formData.condition || 'Baik')
+                  option(value="Baik" selected=(currentCond === 'Baik')) Baik (Normal / Siap Pakai)
+                  option(value="Maintenance" selected=(currentCond === 'Maintenance')) Maintenance (Sedang Diperbaiki)
+                  option(value="Rusak" selected=(currentCond === 'Rusak')) Rusak (Perlu Penggantian)
+            
+            .row
+              .col-md-6.mb-3
+                label.form-label Tanggal Pemeliharaan
+                input.form-control(type="date" name="date" value=(formData.date || '') required)
+              
+            .mb-3
+              label.form-label Deskripsi Pemeliharaan & Tindakan
+              textarea.form-control(name="description" rows="4" placeholder="Jelaskan tindakan pemeliharaan yang dilakukan (misal: membersihkan CPU, upgrade RAM, ganti pasta processor, dsb)..." required)= formData.description || ''
+
+            hr.my-4
+
+            h5.card-title.fw-semibold.mb-3 Penggunaan Bahan Habis Pakai (BHP)
+            p.card-subtitle.mb-4 Opsional. Pilih jika selama proses maintenance terdapat BHP yang terpakai. Stok sistem akan berkurang otomatis.
+
+            .row
+              .col-md-6.mb-3
+                label.form-label Pilih BHP
+                select.form-select(name="bhp_used_id")
+                  option(value="" selected=(!formData.bhp_used_id)) -- Tidak Menggunakan BHP --
+                  each bhp in (bhps || [])
+                    option(value=bhp.id selected=(String(formData.bhp_used_id) === String(bhp.id)) data-stock=bhp.stock data-unit=bhp.unit)
+                      = `${bhp.name} (Tersedia: ${bhp.stock} ${bhp.unit})`
+                small#bhp-stock-help.text-primary.fw-semibold.mt-1.d-block
+              
+              .col-md-6.mb-3
+                label.form-label Jumlah BHP yang Digunakan
+                input.form-control(type="number" name="bhp_quantity_used" placeholder="Masukkan jumlah" value=(formData.bhp_quantity_used || '') min="1" disabled=(!formData.bhp_used_id))
+            
+            .d-flex.gap-2.mt-4
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-device-floppy.me-1
+                | Simpan Log Maintenance
+              a.btn.btn-outline-secondary(href="/stafflab/maintenance") Batal
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      const bhpSelect = document.querySelector('select[name="bhp_used_id"]');
+      const qtyInput = document.querySelector('input[name="bhp_quantity_used"]');
+      const stockHelp = document.getElementById('bhp-stock-help');
+
+      function updateBhpFields() {
+        const selectedOption = bhpSelect.options[bhpSelect.selectedIndex];
+        const stock = selectedOption.getAttribute('data-stock');
+        const unit = selectedOption.getAttribute('data-unit');
+
+        if (stock !== null && stock !== undefined && bhpSelect.value !== "") {
+          stockHelp.textContent = `Stok tersedia: ${stock} ${unit}`;
+          qtyInput.removeAttribute('disabled');
+          qtyInput.setAttribute('max', stock);
+          qtyInput.setAttribute('required', 'required');
+        } else {
+          stockHelp.textContent = '';
+          qtyInput.setAttribute('disabled', 'disabled');
+          qtyInput.removeAttribute('required');
+          qtyInput.removeAttribute('max');
+          qtyInput.value = '';
+        }
+      }
+
+      // Run on init in case of validation back
+      updateBhpFields();
+
+      // Run on change
+      bhpSelect.addEventListener('change', updateBhpFields);
+
+      // Auto update condition dropdown to match selected inventory's condition on change
+      const invSelect = document.querySelector('select[name="inventory_id"]');
+      const condSelect = document.querySelector('select[name="condition"]');
+      
+      invSelect.addEventListener('change', function() {
+        const selectedOption = invSelect.options[invSelect.selectedIndex];
+        const condition = selectedOption.getAttribute('data-condition');
+        if (condition) {
+          condSelect.value = condition;
+        }
+      });
+    });

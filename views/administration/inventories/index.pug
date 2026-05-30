@@ -75,6 +75,28 @@ block content
       h5.card-title.fw-semibold.mb-1 Daftar Inventaris Berlabel
       p.card-subtitle.mb-4 Satu baris = satu unit barang = satu nomor label = satu QR code.
 
+      //- Filter Form
+      form(method="GET" action="/administration/inventories" class="row g-3 mb-4 align-items-end border p-3 rounded bg-light")
+        .col-md-4
+          label.form-label.fw-semibold Ruangan
+          select.form-select(name="room_id")
+            option(value="") -- Semua Ruangan --
+            each room in (rooms || [])
+              option(value=room.id selected=(String(selectedRoomId) === String(room.id)))= room.name
+        .col-md-4
+          label.form-label.fw-semibold Tahun Pengadaan
+          select.form-select(name="year")
+            option(value="") -- Semua Tahun --
+            each y in (years || [])
+              option(value=y selected=(String(selectedYear) === String(y)))= y
+        .col-md-4.d-flex.gap-2
+          button.btn.btn-primary.w-100(type="submit")
+            i.ti.ti-filter.me-1
+            | Filter
+          a.btn.btn-outline-secondary.w-100(href="/administration/inventories")
+            i.ti.ti-refresh.me-1
+            | Reset
+
       .table-responsive.mt-2
         table.table.align-middle.text-nowrap.mb-0
           thead.text-dark.fs-4
@@ -83,6 +105,7 @@ block content
               th.border-bottom-0.fw-semibold Nomor Label
               th.border-bottom-0.fw-semibold Nama Barang
               th.border-bottom-0.fw-semibold Tahun
+              th.border-bottom-0.fw-semibold Ruangan
               th.border-bottom-0.fw-semibold QR
               th.border-bottom-0.fw-semibold.text-center Aksi
           tbody
@@ -94,6 +117,8 @@ block content
                     h6.fw-semibold.mb-0= inv.label_number || '-'
                   td.border-bottom-0= inv.name || (inv.procurementItem ? inv.procurementItem.item_name : '-')
                   td.border-bottom-0= inv.procurementItem && inv.procurementItem.draft ? inv.procurementItem.draft.year : '-'
+                  td.border-bottom-0
+                    span.badge.bg-light-secondary.text-secondary.fw-semibold= inv.room ? inv.room.name : '-'
                   td.border-bottom-0
                     if inv.qr_image_path
                       img.rounded.border(src=inv.qr_image_path alt=`QR ${inv.label_number}` style="width: 48px; height: 48px; object-fit: cover;")

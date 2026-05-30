@@ -57,6 +57,19 @@ aside.left-sidebar
               i.ti.ti-qrcode
               span.hide-menu Input Inventaris
         
+        if user && user.role === 'Staf Laboratorium'
+          li.nav-small-cap
+            iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
+            span.hide-menu Laboratorium
+          li.sidebar-item
+            a.sidebar-link(href="/stafflab/bhps" aria-expanded="false")
+              i.ti.ti-archive
+              span.hide-menu Kelola Stok BHP
+          li.sidebar-item
+            a.sidebar-link(href="/stafflab/maintenance" aria-expanded="false")
+              i.ti.ti-tool
+              span.hide-menu Log Maintenance
+        
         if user && user.role === 'Administrator'
           li.nav-small-cap
             iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
