@@ -8,7 +8,7 @@ const users = [
   { name: 'Kepala Lab', email: 'kalab@lab.com', role_id: 2 },
   { name: 'Ketua Prodi', email: 'kaprodi@lab.com', role_id: 3 },
   { name: 'Staf Administrasi', email: 'adminstaff@lab.com', role_id: 4 },
-  { name: 'Staf Lapangan', email: 'staff@lab.com', role_id: 5 }
+  { name: 'Staf Lab', email: 'staff@lab.com', role_id: 5 }
 ];
 
 module.exports = {
