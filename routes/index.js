@@ -103,6 +103,8 @@ router.get('/stafflab/inventories/:id/move-room', authCheck, roleCheck('Staf Lab
 router.post('/stafflab/inventories/:id/move-room', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postMoveRoom);
 router.get('/stafflab/inventories/:id/complete-maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getCompleteMaintenance);
 router.post('/stafflab/inventories/:id/complete-maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postCompleteMaintenance);
+router.get('/stafflab/inventories/:id/change-status', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getChangeStatus);
+router.post('/stafflab/inventories/:id/change-status', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postChangeStatus);
 router.get('/stafflab/inventories/:id/edit', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getEditInventory);
 router.post('/stafflab/inventories/:id/edit', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postUpdateInventory);
 

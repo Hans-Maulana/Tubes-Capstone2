@@ -31,6 +31,12 @@ block content
       strong Error! 
       = error
       button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if warning
+    .alert.alert-warning.alert-dismissible.fade.show(role="alert")
+      i.ti.ti-alert-triangle.me-2
+      strong Peringatan!
+      = warning
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
 
   if draft.status === 'Submitted'
     .alert.alert-info.alert-dismissible.fade.show(role="alert")
@@ -127,8 +133,15 @@ block content
                         else
                           span.text-muted -
                       td.border-bottom-0
-                        if item.replacementInventory
-                          span.text-wrap.d-inline-block(style="max-width: 220px;")= item.replacementInventory.name
+                        if item.replacementTargets && item.replacementTargets.length > 0
+                          each target, tIdx in item.replacementTargets
+                            if tIdx > 0
+                              br
+                            span.text-wrap.d-inline-block(style="max-width: 220px;")= target.inventory ? `${target.inventory.label_number} - ${target.inventory.name}` : '-'
+                          if item.replacement_reason
+                            small.text-muted.d-block= `Alasan: ${item.replacement_reason}`
+                        else if item.replacementInventory
+                          span.text-wrap.d-inline-block(style="max-width: 220px;")= `${item.replacementInventory.label_number || '-'} - ${item.replacementInventory.name}`
                         else
                           span.text-muted -
                       if draft.status !== 'Draft'
@@ -165,8 +178,12 @@ block content
           .modal-header
             h5#addItemModalLabel.modal-title.fw-semibold Tambah Item Pengadaan
             button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
-          form(action=`/procurement-drafts/${draft.id}/items` method="POST")
+          form#addItemForm(action=`/procurement-drafts/${draft.id}/items` method="POST" data-ajax-item-form="1")
             .modal-body
+              #addItemFormError.alert.alert-danger.d-none(role="alert")
+                i.ti.ti-alert-circle.me-1
+                strong Error!
+                span#addItemFormErrorText
               .row
                 .col-md-6.mb-3
                   label.form-label(for="item_type") Jenis Barang
@@ -190,25 +207,42 @@ block content
                 .col-12.mb-3
                   label.form-label(for="purchase_link") Link Pembelian
                   input#purchase_link.form-control(type="url" name="purchase_link" placeholder="https://...")
-                .col-12.mb-0
-                  label.form-label(for="replacement_inventory_id") Pengganti Inventaris Rusak / Maintenance
-                  select#replacement_inventory_id.form-select(name="replacement_inventory_id")
-                    option(value="") Tidak mengganti inventaris lama
-                    if damagedInventories && damagedInventories.length > 0
-                      each inventory in damagedInventories
-                        option(value=inventory.id)= `${inventory.label_number || '-'} - ${inventory.name} (${inventory.condition})`
+                .col-12.mb-3#replacement_section(style="display: none;")
+                  label.form-label Pengganti Inventaris Rusak / Maintenance
+                  include ../partials/replacement-inventory-picker
+                  label.form-label.mt-3(for="replacement_reason") Alasan Penggantian
+                  textarea#replacement_reason.form-control(name="replacement_reason" rows="3" placeholder="Jelaskan mengapa barang lama perlu diganti...")
             .modal-footer
               button.btn.btn-outline-secondary(type="button" data-bs-dismiss="modal") Batal
-              button.btn.btn-primary(type="submit")
+              button#addItemSubmitBtn.btn.btn-primary(type="submit")
                 i.ti.ti-plus.me-1
                 | Tambah Item
 
 block scripts
+  script(src="/js/replacement-inventory-picker.js")
   script.
     document.addEventListener('DOMContentLoaded', function () {
       const itemTypeSelect = document.getElementById('item_type');
       const unitField = document.getElementById('bhp_unit_field');
       const unitInput = document.getElementById('unit');
+      const replacementSection = document.getElementById('replacement_section');
+      const addItemModal = document.getElementById('addItemModal');
+      const addItemForm = document.getElementById('addItemForm');
+      const addItemFormError = document.getElementById('addItemFormError');
+      const addItemFormErrorText = document.getElementById('addItemFormErrorText');
+      const addItemSubmitBtn = document.getElementById('addItemSubmitBtn');
+
+      function hideAddItemFormError() {
+        if (addItemFormError) addItemFormError.classList.add('d-none');
+        if (addItemFormErrorText) addItemFormErrorText.textContent = '';
+      }
+
+      function showAddItemFormError(message) {
+        if (!addItemFormError || !addItemFormErrorText) return;
+        addItemFormErrorText.textContent = message;
+        addItemFormError.classList.remove('d-none');
+        addItemFormError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
 
       function toggleUnitField() {
         const isBhp = itemTypeSelect && itemTypeSelect.value === 'BHP';
@@ -221,11 +255,145 @@ block scripts
             unitInput.value = 'pcs';
           }
         }
+        if (replacementSection) {
+          replacementSection.style.display = isBhp ? 'none' : '';
+        }
+        if (window.setReplacementPickerEnabled) {
+          window.setReplacementPickerEnabled(!isBhp, replacementSection);
+        }
       }
 
       if (itemTypeSelect) {
         itemTypeSelect.addEventListener('change', toggleUnitField);
         toggleUnitField();
+      }
+
+      if (addItemModal) {
+        addItemModal.addEventListener('shown.bs.modal', function () {
+          hideAddItemFormError();
+          if (window.initReplacementInventoryPickers) {
+            window.initReplacementInventoryPickers(replacementSection, document.getElementById('replacement_reason'));
+          }
+          toggleUnitField();
+        });
+        addItemModal.addEventListener('hidden.bs.modal', function () {
+          hideAddItemFormError();
+          if (addItemForm) addItemForm.reset();
+          const pickerRoot = replacementSection && replacementSection.querySelector('[data-picker-root]');
+          if (pickerRoot && pickerRoot._replacementPickerUpdate) {
+            pickerRoot._replacementPickerUpdate();
+          }
+          if (window.setReplacementPickerEnabled) {
+            window.setReplacementPickerEnabled(false, replacementSection);
+          }
+          toggleUnitField();
+        });
+      }
+
+      function buildUrlEncodedBody(form) {
+        const params = new URLSearchParams();
+        form.querySelectorAll('input, select, textarea').forEach(function (el) {
+          if (!el.name || el.disabled) return;
+          if (el.type === 'checkbox') {
+            if (el.checked) params.append(el.name, el.value);
+            return;
+          }
+          if (el.type === 'radio') {
+            if (el.checked) params.append(el.name, el.value);
+            return;
+          }
+          params.append(el.name, el.value);
+        });
+        return params;
+      }
+
+      async function parseAjaxResponse(response) {
+        const text = await response.text();
+        if (!text) {
+          return { ok: false, error: `Server mengembalikan respons kosong (HTTP ${response.status}).` };
+        }
+        try {
+          return JSON.parse(text);
+        } catch (parseErr) {
+          if (response.redirected || (text.includes('<!DOCTYPE') || text.includes('<html'))) {
+            return {
+              ok: false,
+              error: 'Sesi berakhir atau server mengembalikan halaman HTML. Refresh halaman lalu login ulang jika perlu.'
+            };
+          }
+          return { ok: false, error: text.slice(0, 200) };
+        }
+      }
+
+      if (addItemForm) {
+        addItemForm.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          hideAddItemFormError();
+
+          if (!addItemForm.checkValidity()) {
+            addItemForm.reportValidity();
+            return;
+          }
+
+          const pickerRoot = replacementSection && replacementSection.querySelector('[data-picker-root]');
+          if (pickerRoot && window.getReplacementCategoryMismatch) {
+            const categoryMsg = window.getReplacementCategoryMismatch(pickerRoot);
+            if (categoryMsg && !window.confirm(`${categoryMsg}\n\nLanjutkan menyimpan?`)) {
+              return;
+            }
+          }
+
+          const originalBtnHtml = addItemSubmitBtn ? addItemSubmitBtn.innerHTML : '';
+          if (addItemSubmitBtn) {
+            addItemSubmitBtn.disabled = true;
+            addItemSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
+          }
+
+          try {
+            const response = await fetch(addItemForm.action, {
+              method: 'POST',
+              redirect: 'manual',
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                Accept: 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+              },
+              body: buildUrlEncodedBody(addItemForm).toString()
+            });
+
+            if (response.status >= 300 && response.status < 400) {
+              showAddItemFormError('Permintaan dialihkan oleh server. Refresh halaman lalu coba lagi.');
+              return;
+            }
+
+            const data = await parseAjaxResponse(response);
+
+            if (!response.ok || !data.ok) {
+              showAddItemFormError(
+                data.error
+                || data.message
+                || `Gagal menambahkan item (HTTP ${response.status}).`
+              );
+              return;
+            }
+
+            let target = data.redirect || window.location.pathname;
+            if (data.warning) {
+              target += (target.includes('?') ? '&' : '?') + 'warning=' + encodeURIComponent(data.warning);
+            }
+            if (data.success) {
+              target += (target.includes('?') ? '&' : '?') + 'flash=' + encodeURIComponent(data.success);
+            }
+            window.location.href = target;
+          } catch (err) {
+            showAddItemFormError(err.message || 'Terjadi kesalahan jaringan. Coba lagi.');
+          } finally {
+            if (addItemSubmitBtn) {
+              addItemSubmitBtn.disabled = false;
+              addItemSubmitBtn.innerHTML = originalBtnHtml;
+            }
+          }
+        });
       }
     });
 

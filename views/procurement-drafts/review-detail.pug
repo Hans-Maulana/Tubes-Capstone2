@@ -140,7 +140,14 @@ block content
                         h6.fw-semibold.mb-0.text-wrap(style="max-width: 180px;")= item.item_name || '-'
                         if item.purchase_link
                           a.small.d-block.text-primary.text-decoration-underline(href=item.purchase_link target="_blank") Link Pembelian
-                        if item.replacementInventory
+                        if item.replacementTargets && item.replacementTargets.length > 0
+                          each target, tIdx in item.replacementTargets
+                            if tIdx > 0
+                              br
+                            span.small.text-muted.d-block= target.inventory ? `Mengganti: ${target.inventory.label_number} - ${target.inventory.name}` : '-'
+                          if item.replacement_reason
+                            span.small.text-muted.d-block= `Alasan: ${item.replacement_reason}`
+                        else if item.replacementInventory
                           span.small.text-muted.d-block= `Mengganti: ${item.replacementInventory.name}`
                       td.border-bottom-0= item.quantity || 0
                       td.border-bottom-0= `Rp ${Number(item.price || 0).toLocaleString('id-ID')}`

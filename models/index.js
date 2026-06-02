@@ -11,6 +11,7 @@ const ProcurementReceipt = require('./ProcurementReceipt');
 const MaintenanceLog = require('./MaintenanceLog');
 const InventoryReplacement = require('./InventoryReplacement');
 const ItemCategory = require('./ItemCategory');
+const ProcurementItemReplacement = require('./ProcurementItemReplacement');
 
 module.exports = {
   sequelize,
@@ -24,5 +25,6 @@ module.exports = {
   ProcurementReceipt,
   MaintenanceLog,
   InventoryReplacement,
-  ItemCategory
+  ItemCategory,
+  ProcurementItemReplacement
 };

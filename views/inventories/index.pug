@@ -29,33 +29,45 @@ block content
           //- Filter Form
           form(method="GET" action="/inventories" class="row g-3 mb-4 align-items-end border p-3 rounded bg-light")
             .col-md-3
+              label.form-label.fw-semibold Cari Nama Barang
+              input.form-control(type="text" name="q" value=selectedQ placeholder="Contoh: Kursi, Monitor...")
+            .col-md-3
+              label.form-label.fw-semibold Nomor Label
+              input.form-control(type="text" name="label" value=selectedLabel placeholder="Contoh: LAB-INV-2026-001")
+            .col-md-2
               label.form-label.fw-semibold Ruangan
               select.form-select(name="room_id")
                 option(value="") -- Semua Ruangan --
                 each room in (rooms || [])
                   option(value=room.id selected=(String(selectedRoomId) === String(room.id)))= room.name
-            .col-md-3
+            .col-md-2
               label.form-label.fw-semibold Kategori
               select.form-select(name="category_id")
                 option(value="") -- Semua Kategori --
                 each cat in (categories || [])
                   option(value=cat.id selected=(String(selectedCategoryId) === String(cat.id)))= cat.name
             .col-md-2
-              label.form-label.fw-semibold Tahun Pengadaan
+              label.form-label.fw-semibold Tahun
               select.form-select(name="year")
                 option(value="") -- Semua Tahun --
                 each y in (years || [])
                   option(value=y selected=(String(selectedYear) === String(y)))= y
-            .col-md-2
-              label.form-label.fw-semibold Nomor Label
-              input.form-control(type="text" name="label" value=selectedLabel placeholder="Cari nomor label...")
-            .col-md-2.d-flex.gap-2
-              button.btn.btn-primary.w-100(type="submit")
-                i.ti.ti-filter.me-1
-                | Filter
-              a.btn.btn-outline-secondary.w-100(href="/inventories")
+            .col-12.d-flex.gap-2.justify-content-end
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-search.me-1
+                | Cari
+              a.btn.btn-outline-secondary(href="/inventories")
                 i.ti.ti-refresh.me-1
                 | Reset
+
+          if selectedLabel || selectedQ
+            .alert.alert-info.py-2.mb-3
+              i.ti.ti-filter.me-1
+              | Menampilkan hasil filter
+              if selectedQ
+                |  nama barang mengandung "#{selectedQ}"
+              if selectedLabel
+                |  nomor label mengandung "#{selectedLabel}"
 
           .table-responsive.mt-4
             table.table.align-middle.text-nowrap.mb-0

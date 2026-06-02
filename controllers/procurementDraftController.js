@@ -1,8 +1,11 @@
 const { Op } = require('sequelize');
 const ProcurementDraft = require('../models/ProcurementDraft');
 const ProcurementItem = require('../models/ProcurementItem');
+const ProcurementItemReplacement = require('../models/ProcurementItemReplacement');
 const Inventory = require('../models/Inventory');
+const ItemCategory = require('../models/ItemCategory');
 const User = require('../models/User');
+const { sequelize } = require('../models');
 
 function isLocked(draft) {
   return draft && ['Locked', 'Approved', 'Rejected'].includes(draft.status);
@@ -23,7 +26,14 @@ async function findOwnedDraft(id, userId) {
       {
         model: ProcurementItem,
         as: 'items',
-        include: [{ model: Inventory, as: 'replacementInventory' }]
+        include: [
+          { model: Inventory, as: 'replacementInventory' },
+          {
+            model: ProcurementItemReplacement,
+            as: 'replacementTargets',
+            include: [{ model: Inventory, as: 'inventory' }]
+          }
+        ]
       }
     ],
     order: [[{ model: ProcurementItem, as: 'items' }, 'id', 'ASC']]
@@ -37,8 +47,116 @@ async function getDamagedInventories() {
         [Op.in]: ['Rusak', 'Maintenance']
       }
     },
-    order: [['name', 'ASC']]
+    include: [{ model: ItemCategory, as: 'itemCategory', required: false }],
+    order: [['label_number', 'ASC']]
   });
+}
+
+async function getReplacementCategoryWarning(inventoryIds) {
+  if (inventoryIds.length < 2) return null;
+
+  const inventories = await Inventory.findAll({
+    where: { id: inventoryIds },
+    include: [{ model: ItemCategory, as: 'itemCategory', required: false }]
+  });
+
+  const categoryKeys = new Set(
+    inventories.map((inv) => (
+      inv.category_id ? `id:${inv.category_id}` : `name:${(inv.category || '').trim().toLowerCase() || 'none'}`
+    ))
+  );
+
+  if (categoryKeys.size <= 1) return null;
+
+  const names = [...new Set(
+    inventories.map((inv) => inv.itemCategory?.name || inv.category || 'Tanpa kategori')
+  )];
+
+  return `Inventaris pengganti memiliki kategori berbeda (${names.join(', ')}). Pastikan nama barang pengadaan sesuai dengan semua unit yang diganti.`;
+}
+
+function parseReplacementInventoryIds(body) {
+  let ids = body.replacement_inventory_ids;
+  if (!ids) return [];
+  if (!Array.isArray(ids)) ids = [ids];
+  return [...new Set(ids.map((id) => parseInt(id, 10)).filter((id) => !Number.isNaN(id)))];
+}
+
+function isAjaxItemRequest(req) {
+  return req.get('X-Requested-With') === 'XMLHttpRequest';
+}
+
+function respondItemForm(req, res, { redirect, error, warning, success, statusCode = 400 }) {
+  if (isAjaxItemRequest(req)) {
+    if (error) {
+      return res.status(statusCode).json({ ok: false, error });
+    }
+    return res.status(200).json({
+      ok: true,
+      redirect,
+      warning: warning || null,
+      success: success || null
+    });
+  }
+
+  if (error) {
+    req.session.error = error;
+    return res.redirect(redirect);
+  }
+  if (warning) req.session.warning = warning;
+  if (success) req.session.success = success;
+  return res.redirect(redirect);
+}
+
+async function syncItemReplacements(item, inventoryIds, reason) {
+  const uniqueIds = [...new Set(inventoryIds)];
+  const trimmedReason = reason ? reason.trim() : '';
+
+  if (uniqueIds.length > 0 && !trimmedReason) {
+    return { error: 'Alasan penggantian wajib diisi jika memilih inventaris yang diganti.' };
+  }
+
+  if (uniqueIds.length > 0) {
+    const inventories = await Inventory.findAll({
+      where: {
+        id: uniqueIds,
+        condition: { [Op.in]: ['Rusak', 'Maintenance'] }
+      }
+    });
+
+    if (inventories.length !== uniqueIds.length) {
+      return { error: 'Salah satu inventaris pengganti tidak valid atau bukan status Rusak/Maintenance.' };
+    }
+  }
+
+  const transaction = await sequelize.transaction();
+  try {
+    await ProcurementItemReplacement.destroy({
+      where: { procurement_item_id: item.id },
+      transaction
+    });
+
+    for (const inventoryId of uniqueIds) {
+      await ProcurementItemReplacement.create({
+        procurement_item_id: item.id,
+        inventory_id: inventoryId
+      }, { transaction });
+    }
+
+    await item.update({
+      replacement_reason: uniqueIds.length > 0 ? trimmedReason : null,
+      replacement_inventory_id: uniqueIds[0] || null
+    }, { transaction });
+
+    await transaction.commit();
+    const categoryWarning = uniqueIds.length >= 2
+      ? await getReplacementCategoryWarning(uniqueIds)
+      : null;
+    return { error: null, categoryWarning };
+  } catch (err) {
+    await transaction.rollback();
+    throw err;
+  }
 }
 
 exports.getDrafts = async (req, res, next) => {
@@ -117,8 +235,9 @@ exports.getDraftDetail = async (req, res, next) => {
       draft,
       damagedInventories,
       locked: isLocked(draft),
-      success: req.session.success || null,
+      success: req.session.success || req.query.flash || null,
       error: req.session.error || null,
+      warning: req.session.warning || req.query.warning || null,
       formData: {}
     });
   } catch (error) {
@@ -126,30 +245,47 @@ exports.getDraftDetail = async (req, res, next) => {
   } finally {
     req.session.success = null;
     req.session.error = null;
+    req.session.warning = null;
   }
 };
 
 exports.postCreateItem = async (req, res, next) => {
-  const { item_type, item_name, quantity, price, purchase_link, replacement_inventory_id, unit } = req.body;
+  const { item_type, item_name, quantity, price, purchase_link, replacement_reason, unit } = req.body;
+  const replacementIds = parseReplacementInventoryIds(req.body);
 
   try {
     const draft = await findOwnedDraft(req.params.id, req.session.user.id);
     if (!draft) {
-      req.session.error = 'Draf pengadaan tidak ditemukan.';
-      return res.redirect('/procurement-drafts');
+      return respondItemForm(req, res, {
+        redirect: '/procurement-drafts',
+        error: 'Draf pengadaan tidak ditemukan.'
+      });
     }
 
+    const draftUrl = `/procurement-drafts/${draft.id}`;
+
     if (isLocked(draft)) {
-      req.session.error = 'Draf sudah terkunci dan tidak dapat diubah.';
-      return res.redirect(`/procurement-drafts/${draft.id}`);
+      return respondItemForm(req, res, {
+        redirect: draftUrl,
+        error: 'Draf sudah terkunci dan tidak dapat diubah.'
+      });
     }
 
     if (!item_type || !item_name || !quantity || !price) {
-      req.session.error = 'Jenis, nama barang, jumlah, dan harga wajib diisi.';
-      return res.redirect(`/procurement-drafts/${draft.id}`);
+      return respondItemForm(req, res, {
+        redirect: draftUrl,
+        error: 'Jenis, nama barang, jumlah, dan harga wajib diisi.'
+      });
     }
 
-    await ProcurementItem.create({
+    if (item_type === 'Inventaris' && replacementIds.length > 0 && replacementIds.length > parseInt(quantity, 10)) {
+      return respondItemForm(req, res, {
+        redirect: draftUrl,
+        error: 'Jumlah inventaris pengganti tidak boleh melebihi jumlah barang yang diajukan.'
+      });
+    }
+
+    const item = await ProcurementItem.create({
       draft_id: draft.id,
       item_type,
       item_name,
@@ -157,12 +293,25 @@ exports.postCreateItem = async (req, res, next) => {
       quantity: parseInt(quantity, 10),
       price: parseInt(price, 10),
       purchase_link: purchase_link || null,
-      replacement_inventory_id: replacement_inventory_id || null,
+      replacement_inventory_id: replacementIds[0] || null,
+      replacement_reason: replacementIds.length > 0 ? replacement_reason : null,
       status: 'Draft'
     });
 
-    req.session.success = 'Item pengadaan berhasil ditambahkan.';
-    return res.redirect(`/procurement-drafts/${draft.id}`);
+    const syncResult = await syncItemReplacements(item, replacementIds, replacement_reason);
+    if (syncResult.error) {
+      await item.destroy();
+      return respondItemForm(req, res, {
+        redirect: draftUrl,
+        error: syncResult.error
+      });
+    }
+
+    return respondItemForm(req, res, {
+      redirect: draftUrl,
+      success: 'Item pengadaan berhasil ditambahkan.',
+      warning: syncResult.categoryWarning || null
+    });
   } catch (error) {
     next(error);
   }
@@ -185,7 +334,14 @@ exports.getEditItem = async (req, res, next) => {
       where: {
         id: req.params.itemId,
         draft_id: draft.id
-      }
+      },
+      include: [
+        {
+          model: ProcurementItemReplacement,
+          as: 'replacementTargets',
+          include: [{ model: Inventory, as: 'inventory' }]
+        }
+      ]
     });
 
     if (!item) {
@@ -208,7 +364,8 @@ exports.getEditItem = async (req, res, next) => {
 };
 
 exports.postUpdateItem = async (req, res, next) => {
-  const { item_type, item_name, quantity, price, purchase_link, replacement_inventory_id, unit } = req.body;
+  const { item_type, item_name, quantity, price, purchase_link, replacement_reason, unit } = req.body;
+  const replacementIds = parseReplacementInventoryIds(req.body);
 
   try {
     const draft = await findOwnedDraft(req.params.id, req.session.user.id);
@@ -226,7 +383,14 @@ exports.postUpdateItem = async (req, res, next) => {
       where: {
         id: req.params.itemId,
         draft_id: draft.id
-      }
+      },
+      include: [
+        {
+          model: ProcurementItemReplacement,
+          as: 'replacementTargets',
+          include: [{ model: Inventory, as: 'inventory' }]
+        }
+      ]
     });
 
     if (!item) {
@@ -247,11 +411,22 @@ exports.postUpdateItem = async (req, res, next) => {
           quantity,
           price,
           purchase_link,
-          replacement_inventory_id,
+          replacement_reason,
           unit
         },
         damagedInventories,
         error: 'Jenis, nama barang, jumlah, dan harga wajib diisi.'
+      });
+    }
+
+    if (item_type === 'Inventaris' && replacementIds.length > 0 && replacementIds.length > parseInt(quantity, 10)) {
+      const damagedInventories = await getDamagedInventories();
+      return res.render('procurement-drafts/edit-item', {
+        title: 'Ubah Item Pengadaan - Sistem Inventaris Laboratorium',
+        draft,
+        item: { ...item.toJSON(), item_type, item_name, quantity, price, purchase_link, replacement_reason, unit },
+        damagedInventories,
+        error: 'Jumlah inventaris pengganti tidak boleh melebihi jumlah barang yang diajukan.'
       });
     }
 
@@ -261,10 +436,25 @@ exports.postUpdateItem = async (req, res, next) => {
       unit: resolveItemUnit(item_type, unit),
       quantity: parseInt(quantity, 10),
       price: parseInt(price, 10),
-      purchase_link: purchase_link || null,
-      replacement_inventory_id: replacement_inventory_id || null
+      purchase_link: purchase_link || null
     });
 
+    const syncResult = await syncItemReplacements(item, replacementIds, replacement_reason);
+    if (syncResult.error) {
+      const damagedInventories = await getDamagedInventories();
+      return res.render('procurement-drafts/edit-item', {
+        title: 'Ubah Item Pengadaan - Sistem Inventaris Laboratorium',
+        draft,
+        item: { ...item.toJSON(), item_type, item_name, quantity, price, purchase_link, replacement_reason, unit },
+        damagedInventories,
+        error: syncResult.error,
+        warning: null
+      });
+    }
+
+    if (syncResult.categoryWarning) {
+      req.session.warning = syncResult.categoryWarning;
+    }
     req.session.success = 'Item pengadaan berhasil diubah.';
     return res.redirect(`/procurement-drafts/${draft.id}`);
   } catch (error) {
@@ -395,7 +585,14 @@ exports.getReviewDraftDetail = async (req, res, next) => {
         {
           model: ProcurementItem,
           as: 'items',
-          include: [{ model: Inventory, as: 'replacementInventory' }]
+          include: [
+            { model: Inventory, as: 'replacementInventory' },
+            {
+              model: ProcurementItemReplacement,
+              as: 'replacementTargets',
+              include: [{ model: Inventory, as: 'inventory' }]
+            }
+          ]
         }
       ],
       order: [[{ model: ProcurementItem, as: 'items' }, 'id', 'ASC']]

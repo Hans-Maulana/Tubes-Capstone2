@@ -1,0 +1,44 @@
+- const pickerSelectedIds = (selectedReplacementIds || []).map((id) => String(id))
+.replacement-inventory-picker(data-picker-root)
+  if damagedInventories && damagedInventories.length > 0
+    input.replacement-search.form-control.mb-2(type="search" placeholder="Cari nomor label atau nama barang..." autocomplete="off")
+    .d-flex.align-items-center.justify-content-between.flex-wrap.gap-2.mb-2
+      p.small.text-muted.mb-0
+        span.replacement-selected-count.fw-semibold 0
+        |  inventaris dipilih
+      button.replacement-clear-all.btn.btn-link.btn-sm.p-0.text-danger(type="button" hidden) Hapus semua
+    .replacement-category-warning.alert.alert-warning.border-0.py-2.px-3.small.mb-2.d-none(role="alert")
+      i.ti.ti-alert-triangle.me-1
+      span.replacement-category-warning-text
+    .replacement-picker-list.border.rounded.bg-white(style="max-height: 240px; overflow-y: auto;")
+      each inventory in damagedInventories
+        - const invId = String(inventory.id)
+        - const categoryName = inventory.itemCategory ? inventory.itemCategory.name : (inventory.category || 'Tanpa kategori')
+        - const categoryKey = inventory.category_id ? String(inventory.category_id) : `name:${(inventory.category || '').trim().toLowerCase() || 'none'}`
+        - const searchText = `${inventory.label_number || ''} ${inventory.name || ''} ${inventory.condition || ''} ${categoryName}`.toLowerCase()
+        .replacement-picker-item.px-3.py-2.border-bottom(data-search-text=searchText data-category-key=categoryKey data-category-name=categoryName)
+          .form-check.mb-0
+            input.form-check-input.replacement-checkbox(
+              type="checkbox"
+              name="replacement_inventory_ids"
+              value=inventory.id
+              id=`replacement_inv_${inventory.id}`
+              checked=pickerSelectedIds.includes(invId)
+            )
+            label.form-check-label.w-100(for=`replacement_inv_${inventory.id}` style="cursor: pointer;")
+              .d-flex.justify-content-between.align-items-center.gap-2.flex-wrap
+                div
+                  span.fw-semibold.small.text-primary= inventory.label_number || '-'
+                  span.ms-1= inventory.name
+                  span.badge.bg-light-primary.text-primary.ms-1.small= categoryName
+                if inventory.condition === 'Rusak'
+                  span.badge.bg-light-danger.text-danger Rusak
+                else if inventory.condition === 'Maintenance'
+                  span.badge.bg-light-warning.text-warning Maintenance
+                else
+                  span.badge.bg-light-secondary.text-secondary= inventory.condition || '-'
+    p.small.text-muted.mb-0.mt-2 Centang satu atau lebih inventaris yang akan diganti oleh pengadaan ini.
+  else
+    .alert.alert-light.border.mb-0.py-2
+      i.ti.ti-info-circle.me-1
+      | Tidak ada inventaris berstatus Rusak atau Maintenance.

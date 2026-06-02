@@ -584,6 +584,56 @@ exports.getEditInventory = async (req, res, next) => {
 };
 
 exports.postUpdateInventory = async (req, res, next) => {
-  req.session.error = 'Gunakan aksi Pindah Ruangan atau Selesaikan Maintenance.';
+  req.session.error = 'Gunakan aksi Pindah Ruangan, Ubah Status, atau Selesaikan Maintenance.';
   return res.redirect('/stafflab/inventories');
+};
+
+exports.getChangeStatus = async (req, res, next) => {
+  try {
+    const inventory = await Inventory.findByPk(req.params.id, {
+      include: [{ model: Room, as: 'room' }]
+    });
+
+    if (!inventory) {
+      req.session.error = 'Data inventaris tidak ditemukan.';
+      return res.redirect('/stafflab/inventories');
+    }
+
+    res.render('stafflab/inventories/change-status', {
+      title: 'Ubah Status Inventaris - Sistem Inventaris Laboratorium',
+      inventory,
+      conditions: INVENTORY_CONDITIONS,
+      error: null
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.postChangeStatus = async (req, res, next) => {
+  const { condition } = req.body;
+
+  try {
+    const inventory = await Inventory.findByPk(req.params.id);
+    if (!inventory) {
+      req.session.error = 'Data inventaris tidak ditemukan.';
+      return res.redirect('/stafflab/inventories');
+    }
+
+    if (!condition || !INVENTORY_CONDITIONS.includes(condition)) {
+      return res.render('stafflab/inventories/change-status', {
+        title: 'Ubah Status Inventaris - Sistem Inventaris Laboratorium',
+        inventory: { ...inventory.toJSON(), condition },
+        conditions: INVENTORY_CONDITIONS,
+        error: 'Kondisi inventaris tidak valid.'
+      });
+    }
+
+    await inventory.update({ condition });
+
+    req.session.success = `Status "${inventory.label_number}" diperbarui menjadi "${condition}".`;
+    return res.redirect('/stafflab/inventories');
+  } catch (error) {
+    next(error);
+  }
 };

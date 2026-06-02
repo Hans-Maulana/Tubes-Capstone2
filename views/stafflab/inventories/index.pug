@@ -37,7 +37,7 @@ block content
           .d-flex.align-items-center.justify-content-between.mb-4.flex-wrap.gap-2
             div
               h5.card-title.fw-semibold.mb-0 Inventaris Laboratorium
-              p.card-subtitle.mb-0 Mulai maintenance, pindah ruangan, atau selesaikan maintenance. Scan QR untuk menampilkan 1 barang.
+              p.card-subtitle.mb-0 Mulai maintenance, ubah status, atau pindah ruangan. Scan QR untuk menampilkan 1 barang.
             .d-flex.gap-2
               a.btn.btn-outline-primary.d-flex.align-items-center.gap-2(href="/stafflab/inventories/scan")
                 i.ti.ti-scan.fs-5
@@ -113,6 +113,9 @@ block content
                           span.badge.bg-danger.rounded-3.fw-semibold Rusak
                       td.border-bottom-0.text-center
                         .d-flex.justify-content-center.gap-1.flex-wrap
+                          a.btn.btn-sm.btn-outline-secondary(href=`/stafflab/inventories/${inv.id}/change-status` title="Ubah Status")
+                            i.ti.ti-refresh
+                            span.d-none.d-md-inline.ms-1 Status
                           if inv.condition === 'Maintenance'
                             a.btn.btn-sm.btn-success(href=`/stafflab/inventories/${inv.id}/complete-maintenance` title="Selesaikan Maintenance")
                               i.ti.ti-circle-check

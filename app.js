@@ -90,6 +90,13 @@ app.use((req, res, next) => {
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error('[Global Error Handler] Error captured:', err.message);
+
+  if (req.get('X-Requested-With') === 'XMLHttpRequest') {
+    return res.status(err.status || 500).json({
+      ok: false,
+      error: err.message || 'Terjadi kesalahan pada server.'
+    });
+  }
   
   if (err.status === 403 || err.status === 401) {
     return res.status(err.status).render('auth/unauthorized', {

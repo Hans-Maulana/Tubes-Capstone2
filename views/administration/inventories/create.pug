@@ -52,6 +52,52 @@ block content
                   p.mb-1.text-muted.small Disetujui Pengadaan
                   h6.fw-semibold.mb-0= progress.approved
 
+            if replacementContext && replacementContext.isReplacement
+              .alert.alert-warning.border.mb-4
+                .d-flex.align-items-start.gap-2
+                  i.ti.ti-replace.fs-5.mt-1
+                  div.w-100
+                    h6.fw-semibold.mb-2 Item Penggantian Inventaris
+                    if replacementContext.replacementReason
+                      p.small.mb-2
+                        strong Alasan:
+                        |  #{replacementContext.replacementReason}
+                    if replacementContext.pendingCount > 0
+                      p.small.mb-2
+                        span.badge.bg-warning.text-dark= `${replacementContext.pendingCount} inventaris lama belum terhubung`
+                        span.ms-2.text-muted Label batch ini akan menghubungkan urut dari atas (maks. sesuai jumlah unit yang disimpan).
+                    else
+                      p.small.mb-2.text-success.mb-0 Semua inventaris lama sudah terhubung ke label baru.
+                    if replacementContext.targets && replacementContext.targets.length > 0
+                      .table-responsive
+                        table.table.table-sm.table-bordered.mb-0
+                          thead
+                            tr
+                              th.small Label Lama
+                              th.small Nama
+                              th.small Ruangan
+                              th.small Kondisi
+                              th.small Status Link
+                          tbody
+                            each target in replacementContext.targets
+                              - const inv = target.inventory
+                              - const isLinked = inv && replacementContext.pendingTargets && !replacementContext.pendingTargets.some((p) => p.inventory_id === target.inventory_id)
+                              tr
+                                td.small= inv ? (inv.label_number || '-') : '-'
+                                td.small= inv ? inv.name : '-'
+                                td.small= inv && inv.room ? inv.room.name : '-'
+                                td.small= inv ? inv.condition : '-'
+                                td.small
+                                  if isLinked
+                                    span.badge.bg-success Sudah terhubung
+                                  else
+                                    span.badge.bg-warning.text-dark Menunggu label
+
+            if roomMismatchWarning
+              .alert.alert-danger.border.mb-4
+                i.ti.ti-alert-triangle.me-1
+                = roomMismatchWarning
+
             form#inventoryForm(action="/administration/inventories" method="POST")
               input(type="hidden" name="procurement_item_id" value=selectedItem.id)
               .row
@@ -74,10 +120,13 @@ block content
                     option(value="Rusak" selected=(selectedCondition === 'Rusak')) Rusak
                 .col-md-6.mb-3
                   label.form-label Ruangan
+                  if replacementContext && replacementContext.suggestedRoomId
+                    p.small.text-muted.mb-1 Ruangan disarankan dari inventaris lama yang akan diganti.
                   select#room_id.form-select(name="room_id" required)
                     option(value="" disabled selected=(!formData.room_id)) -- Pilih Ruangan --
                     each room in (rooms || [])
                       option(value=room.id selected=(String(formData.room_id) === String(room.id)))= room.name
+                  #roomMismatchHint.alert.alert-warning.border-0.py-2.px-3.small.mb-0.mt-2.d-none(role="alert")
                 .col-md-6.mb-3
                   label.form-label Jumlah Unit ke Ruangan Ini
                   .input-group
@@ -103,12 +152,16 @@ block content
 
 block scripts
   if selectedItem && progress
+    - const pendingRoomHints = (replacementContext && replacementContext.pendingTargets) ? replacementContext.pendingTargets.filter((t) => t.inventory && t.inventory.room_id).map((t) => ({ roomId: t.inventory.room_id, roomName: t.inventory.room ? t.inventory.room.name : '', label: t.inventory.label_number || '-' })) : []
     script.
       document.addEventListener('DOMContentLoaded', function () {
         const quantityInput = document.getElementById('quantity');
         const btnAllRemaining = document.getElementById('btnAllRemaining');
         const labelPreview = document.getElementById('labelPreview');
         const inventoryForm = document.getElementById('inventoryForm');
+        const roomSelect = document.getElementById('room_id');
+        const roomMismatchHint = document.getElementById('roomMismatchHint');
+        const pendingRoomHints = !{JSON.stringify(pendingRoomHints)};
         const maxRemaining = #{progress.remaining};
         const draftYear = #{draftYear};
         const startLabel = '#{suggestedLabel}';
@@ -138,25 +191,59 @@ block scripts
           btnAllRemaining.addEventListener('click', function () {
             quantityInput.value = maxRemaining;
             updatePreview();
+            updateRoomMismatchHint();
           });
         }
 
         if (quantityInput) {
-          quantityInput.addEventListener('input', updatePreview);
           updatePreview();
         }
+
+        function updateRoomMismatchHint() {
+          if (!roomSelect || !roomMismatchHint || pendingRoomHints.length === 0) return;
+          const selectedRoomId = parseInt(roomSelect.value, 10);
+          const qty = Math.max(1, parseInt(quantityInput ? quantityInput.value : '1', 10) || 1);
+          const toCheck = pendingRoomHints.slice(0, qty);
+          const mismatched = toCheck.filter((h) => h.roomId && h.roomId !== selectedRoomId);
+          if (mismatched.length === 0) {
+            roomMismatchHint.classList.add('d-none');
+            roomMismatchHint.textContent = '';
+            return;
+          }
+          const labels = mismatched.map((h) => `${h.label} (${h.roomName})`).join(', ');
+          roomMismatchHint.textContent = `Perhatian: ruangan berbeda dari inventaris lama ${labels}.`;
+          roomMismatchHint.classList.remove('d-none');
+        }
+
+        if (roomSelect) {
+          roomSelect.addEventListener('change', updateRoomMismatchHint);
+        }
+        if (quantityInput) {
+          quantityInput.addEventListener('input', function () {
+            updatePreview();
+            updateRoomMismatchHint();
+          });
+        }
+        updateRoomMismatchHint();
 
         if (inventoryForm && quantityInput) {
           inventoryForm.addEventListener('submit', function (e) {
             const qty = parseInt(quantityInput.value, 10) || 1;
-            const roomSelect = document.getElementById('room_id');
             const roomName = roomSelect && roomSelect.selectedIndex > 0
               ? roomSelect.options[roomSelect.selectedIndex].text
               : 'ruangan terpilih';
 
-            const message = qty === 1
+            let message = qty === 1
               ? `Simpan 1 label ke ${roomName}?`
               : `Simpan ${qty} label sekaligus ke ${roomName}?`;
+
+            if (pendingRoomHints.length > 0) {
+              const selectedRoomId = roomSelect ? parseInt(roomSelect.value, 10) : null;
+              const mismatched = pendingRoomHints.slice(0, qty).filter((h) => h.roomId && h.roomId !== selectedRoomId);
+              if (mismatched.length > 0) {
+                message += '\n\nRuangan berbeda dari inventaris lama. Lanjutkan?';
+              }
+            }
 
             if (!confirm(message)) {
               e.preventDefault();

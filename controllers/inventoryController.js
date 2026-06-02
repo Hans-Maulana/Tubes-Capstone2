@@ -3,14 +3,17 @@ const { Op } = require('sequelize');
 
 exports.getInventories = async (req, res, next) => {
   try {
-    const { room_id, year, label, category_id } = req.query;
+    const { room_id, year, label, category_id, q } = req.query;
 
     const inventoryWhere = {};
     if (room_id) {
       inventoryWhere.room_id = parseInt(room_id, 10);
     }
-    if (label) {
+    if (label && label.trim()) {
       inventoryWhere.label_number = { [Op.like]: `%${label.trim()}%` };
+    }
+    if (q && q.trim()) {
+      inventoryWhere.name = { [Op.like]: `%${q.trim()}%` };
     }
     if (category_id) {
       inventoryWhere.category_id = parseInt(category_id, 10);
@@ -66,7 +69,8 @@ exports.getInventories = async (req, res, next) => {
       selectedRoomId: room_id || '',
       selectedYear: year || '',
       selectedLabel: label || '',
-      selectedCategoryId: category_id || ''
+      selectedCategoryId: category_id || '',
+      selectedQ: q || ''
     });
   } catch (error) {
     next(error);

@@ -1,0 +1,59 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Ubah Status Inventaris
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/stafflab/inventories") Kelola Inventaris
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Ubah Status
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error!
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-3 Ubah Kondisi Barang
+          p.card-subtitle.mb-4 Gunakan ini untuk mengubah status tanpa mencatat log maintenance. Untuk perbaikan dengan dokumentasi, gunakan alur Mulai Maintenance → Selesaikan Maintenance.
+
+          .mb-4
+            p.text-muted.mb-1 Nomor Label
+            h6.fw-semibold.mb-0= inventory.label_number
+            p.text-muted.mb-1.mt-2 Nama Barang
+            h6.fw-semibold.mb-0= inventory.name
+            p.text-muted.mb-1.mt-2 Kondisi Saat Ini
+            if inventory.condition === 'Baik'
+              span.badge.bg-success Baik
+            else if inventory.condition === 'Maintenance'
+              span.badge.bg-warning Maintenance
+            else
+              span.badge.bg-danger Rusak
+
+          form(action=`/stafflab/inventories/${inventory.id}/change-status` method="POST" onsubmit="return confirm('Ubah status inventaris ini?')")
+            .mb-4
+              label.form-label Kondisi Baru
+              select.form-select(name="condition" required)
+                each cond in (conditions || [])
+                  option(value=cond selected=(inventory.condition === cond))= cond
+            .d-flex.gap-2
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-refresh.me-1
+                | Simpan Status
+              a.btn.btn-outline-secondary(href="/stafflab/inventories") Batal

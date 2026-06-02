@@ -47,6 +47,10 @@ const ProcurementItem = sequelize.define('ProcurementItem', {
       key: 'id'
     }
   },
+  replacement_reason: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
   status: {
     type: DataTypes.STRING,
     allowNull: true

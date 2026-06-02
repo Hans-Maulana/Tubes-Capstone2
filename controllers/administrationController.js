@@ -1,9 +1,65 @@
 const { Op } = require('sequelize');
-const { ProcurementDraft, ProcurementItem, ProcurementReceipt, Inventory, InventoryReplacement, User, Bhp, Room, ItemCategory, sequelize } = require('../models');
+const { ProcurementDraft, ProcurementItem, ProcurementReceipt, Inventory, InventoryReplacement, User, Bhp, Room, ItemCategory, ProcurementItemReplacement, sequelize } = require('../models');
 const QRCode = require('qrcode');
 const { generateNextLabelNumber, generateLabelNumbers } = require('../utils/inventoryLabel');
 
 const INVENTORY_CONDITIONS = new Set(['Baik', 'Rusak', 'Maintenance']);
+
+async function buildReplacementContext(item) {
+  const targets = (item.replacementTargets || []).slice().sort((a, b) => a.id - b.id);
+  const hasLegacy = Boolean(item.replacement_inventory_id);
+  if (targets.length === 0 && !hasLegacy) {
+    return {
+      isReplacement: false,
+      targets: [],
+      pendingTargets: [],
+      pendingCount: 0,
+      linkedCount: 0,
+      totalTargets: 0,
+      suggestedRoomId: null,
+      replacementReason: null
+    };
+  }
+
+  const oldIds = targets.map((t) => t.inventory_id).filter(Boolean);
+  if (hasLegacy && !oldIds.includes(item.replacement_inventory_id)) {
+    oldIds.push(item.replacement_inventory_id);
+  }
+
+  const linkedRows = oldIds.length > 0
+    ? await InventoryReplacement.findAll({
+      where: { old_inventory_id: oldIds },
+      attributes: ['old_inventory_id']
+    })
+    : [];
+  const linkedSet = new Set(linkedRows.map((r) => r.old_inventory_id));
+
+  const pendingTargets = targets.filter((t) => !linkedSet.has(t.inventory_id));
+  const linkedCount = targets.filter((t) => linkedSet.has(t.inventory_id)).length
+    + (hasLegacy && linkedSet.has(item.replacement_inventory_id) && !targets.some((t) => t.inventory_id === item.replacement_inventory_id) ? 1 : 0);
+
+  const firstPending = pendingTargets[0];
+  const suggestedRoomId = firstPending && firstPending.inventory
+    ? firstPending.inventory.room_id
+    : null;
+
+  return {
+    isReplacement: true,
+    targets,
+    pendingTargets,
+    pendingCount: pendingTargets.length + (
+      hasLegacy
+      && !linkedSet.has(item.replacement_inventory_id)
+      && !targets.some((t) => t.inventory_id === item.replacement_inventory_id)
+        ? 1
+        : 0
+    ),
+    linkedCount,
+    totalTargets: Math.max(targets.length, hasLegacy ? 1 : 0),
+    suggestedRoomId,
+    replacementReason: item.replacement_reason || null
+  };
+}
 
 async function loadCreateInventoryFormData(item, formData = {}) {
   const progress = getLabelProgress(item);
@@ -11,6 +67,12 @@ async function loadCreateInventoryFormData(item, formData = {}) {
   const categories = await ItemCategory.findAll({ order: [['name', 'ASC']] });
   const draftYear = item.draft ? item.draft.year : new Date().getFullYear();
   const suggestedLabel = await generateNextLabelNumber(draftYear);
+  const replacementContext = await buildReplacementContext(item);
+
+  const resolvedFormData = { ...formData };
+  if (replacementContext.suggestedRoomId && !resolvedFormData.room_id) {
+    resolvedFormData.room_id = String(replacementContext.suggestedRoomId);
+  }
 
   return {
     progress,
@@ -18,7 +80,8 @@ async function loadCreateInventoryFormData(item, formData = {}) {
     categories,
     suggestedLabel,
     draftYear,
-    formData
+    replacementContext,
+    formData: resolvedFormData
   };
 }
 
@@ -45,7 +108,16 @@ async function findApprovedInventarisItem(itemId) {
         where: { status: 'Approved' }
       },
       { model: Inventory, as: 'receivedInventories' },
-      { model: ProcurementReceipt, as: 'receipts' }
+      { model: ProcurementReceipt, as: 'receipts' },
+      {
+        model: ProcurementItemReplacement,
+        as: 'replacementTargets',
+        include: [{
+          model: Inventory,
+          as: 'inventory',
+          include: [{ model: Room, as: 'room' }]
+        }]
+      }
     ]
   });
 }
@@ -78,20 +150,49 @@ async function getEligibleInventarisItems() {
         where: { status: 'Approved' }
       },
       { model: Inventory, as: 'receivedInventories' },
-      { model: ProcurementReceipt, as: 'receipts' }
+      { model: ProcurementReceipt, as: 'receipts' },
+      { model: ProcurementItemReplacement, as: 'replacementTargets', required: false }
     ],
     order: [[{ model: ProcurementDraft, as: 'draft' }, 'year', 'DESC'], ['id', 'DESC']]
   });
 
-  return items
+  const entries = items
     .map((item) => {
       const labeled = item.receivedInventories ? item.receivedInventories.length : 0;
       const received = getReceivedTotal(item);
       const approved = Number(item.quantity || 0);
       const remaining = Math.max(received - labeled, 0);
-      return { item, labeled, received, approved, remaining };
+      const replacementTargetCount = (item.replacementTargets || []).length;
+      const isReplacement = replacementTargetCount > 0
+        || Boolean(item.replacement_reason)
+        || Boolean(item.replacement_inventory_id);
+      return { item, labeled, received, approved, remaining, isReplacement, replacementTargetCount };
     })
     .filter((entry) => entry.received > 0 && entry.remaining > 0);
+
+  const replacementItemIds = entries
+    .filter((e) => e.isReplacement)
+    .map((e) => e.item.id);
+  if (replacementItemIds.length === 0) return entries;
+
+  const allTargets = entries
+    .filter((e) => e.isReplacement)
+    .flatMap((e) => (e.item.replacementTargets || []).map((t) => t.inventory_id));
+
+  const linkedRows = allTargets.length > 0
+    ? await InventoryReplacement.findAll({
+      where: { old_inventory_id: allTargets },
+      attributes: ['old_inventory_id']
+    })
+    : [];
+  const linkedSet = new Set(linkedRows.map((r) => r.old_inventory_id));
+
+  return entries.map((entry) => {
+    if (!entry.isReplacement) return entry;
+    const pendingReplacementCount = (entry.item.replacementTargets || [])
+      .filter((t) => !linkedSet.has(t.inventory_id)).length;
+    return { ...entry, pendingReplacementCount };
+  });
 }
 
 function getLabelProgress(item) {
@@ -391,7 +492,7 @@ exports.postCreateReceipt = async (req, res, next) => {
 
 exports.getInventories = async (req, res, next) => {
   try {
-    const { room_id, year, category_id } = req.query;
+    const { room_id, year, category_id, label, q } = req.query;
 
     const pendingItems = await getEligibleInventarisItems();
 
@@ -413,6 +514,12 @@ exports.getInventories = async (req, res, next) => {
     }
     if (category_id) {
       inventoryWhere.category_id = parseInt(category_id, 10);
+    }
+    if (label && label.trim()) {
+      inventoryWhere.label_number = { [Op.like]: `%${label.trim()}%` };
+    }
+    if (q && q.trim()) {
+      inventoryWhere.name = { [Op.like]: `%${q.trim()}%` };
     }
 
     const draftWhere = { status: 'Approved' };
@@ -467,6 +574,8 @@ exports.getInventories = async (req, res, next) => {
       selectedRoomId: room_id || '',
       selectedYear: year || '',
       selectedCategoryId: category_id || '',
+      selectedLabel: label || '',
+      selectedQ: q || '',
       success: req.session.success || null,
       error: req.session.error || null
     });
@@ -509,7 +618,8 @@ exports.getCreateInventory = async (req, res, next) => {
       title: 'Input Label Inventaris - Sistem Inventaris Laboratorium',
       selectedItem: item,
       ...formContext,
-      error: null
+      error: null,
+      roomMismatchWarning: null
     });
   } catch (error) {
     next(error);
@@ -531,13 +641,14 @@ exports.postCreateInventory = async (req, res, next) => {
     const parsedCategoryId = category_id ? parseInt(category_id, 10) : null;
     const parsedQuantity = parseInt(quantity, 10) || 1;
 
-    const renderCreateForm = async (error, formData = {}) => {
+    const renderCreateForm = async (error, formData = {}, roomMismatchWarning = null) => {
       const formContext = await loadCreateInventoryFormData(item, formData);
       return res.render('administration/inventories/create', {
         title: 'Input Label Inventaris - Sistem Inventaris Laboratorium',
         selectedItem: item,
         ...formContext,
-        error
+        error,
+        roomMismatchWarning
       });
     };
 
@@ -592,13 +703,39 @@ exports.postCreateInventory = async (req, res, next) => {
       return renderCreateForm(`Jumlah unit melebihi sisa yang belum berlabel. Sisa saat ini: ${remaining} unit.`, baseFormData);
     }
 
+    const replacementContext = await buildReplacementContext(item);
+    let roomMismatchWarning = null;
+    if (replacementContext.isReplacement && replacementContext.pendingTargets.length > 0) {
+      const mismatched = replacementContext.pendingTargets
+        .slice(0, parsedQuantity)
+        .filter((t) => t.inventory && t.inventory.room_id && t.inventory.room_id !== parsedRoomId);
+      if (mismatched.length > 0) {
+        const examples = mismatched
+          .map((t) => `${t.inventory.label_number || '-'} (${t.inventory.room ? t.inventory.room.name : 'tanpa ruang'})`)
+          .join(', ');
+        roomMismatchWarning = `Ruangan berbeda dari inventaris lama: ${examples}. Pastikan penempatan sudah benar.`;
+      }
+    }
+
     const draftYear = item.draft ? item.draft.year : new Date().getFullYear();
     const labelNumbers = await generateLabelNumbers(draftYear, parsedQuantity);
     const latestReceivedDate = getLatestReceivedDate(item);
     const createdLabels = [];
+    let linkedInBatch = 0;
 
     const transaction = await sequelize.transaction();
     try {
+      const replacementTargets = (item.replacementTargets || []).sort((a, b) => a.id - b.id);
+      const linkedReplacements = await InventoryReplacement.findAll({
+        where: { old_inventory_id: replacementTargets.map((t) => t.inventory_id) },
+        attributes: ['old_inventory_id'],
+        transaction
+      });
+      const linkedOldIds = new Set(linkedReplacements.map((r) => r.old_inventory_id));
+      const pendingReplacements = replacementTargets.filter((t) => !linkedOldIds.has(t.inventory_id));
+      const replacementReason = item.replacement_reason
+        || `Penggantian dari pengadaan tahun ${item.draft ? item.draft.year : '-'}`;
+
       for (let i = 0; i < labelNumbers.length; i++) {
         const label_number = labelNumbers[i];
         const qrImagePath = await generateQrDataUrl(req, label_number);
@@ -616,13 +753,29 @@ exports.postCreateInventory = async (req, res, next) => {
           qr_image_path: qrImagePath
         }, { transaction });
 
-        if (item.replacement_inventory_id && inventoryTotal === 0 && i === 0) {
+        const pendingReplacement = pendingReplacements[i];
+        if (pendingReplacement) {
+          await InventoryReplacement.create({
+            old_inventory_id: pendingReplacement.inventory_id,
+            new_inventory_id: inventory.id,
+            date: new Date(),
+            reason: replacementReason
+          }, { transaction });
+          linkedOldIds.add(pendingReplacement.inventory_id);
+          linkedInBatch += 1;
+        } else if (
+          item.replacement_inventory_id
+          && inventoryTotal === 0
+          && i === 0
+          && !linkedOldIds.has(item.replacement_inventory_id)
+        ) {
           await InventoryReplacement.create({
             old_inventory_id: item.replacement_inventory_id,
             new_inventory_id: inventory.id,
             date: new Date(),
-            reason: `Penggantian dari pengadaan tahun ${item.draft ? item.draft.year : '-'}`
+            reason: replacementReason
           }, { transaction });
+          linkedInBatch += 1;
         }
 
         createdLabels.push(label_number);
@@ -639,12 +792,22 @@ exports.postCreateInventory = async (req, res, next) => {
       ? createdLabels[0]
       : `${createdLabels[0]} s/d ${createdLabels[createdLabels.length - 1]}`;
 
+    const replacementNote = linkedInBatch > 0
+      ? ` ${linkedInBatch} unit terhubung sebagai penggantian inventaris.`
+      : '';
+
     if (remainingAfter > 0) {
-      req.session.success = `${parsedQuantity} label (${labelRange}) berhasil dibuat di ruangan "${room.name}". Sisa ${remainingAfter} unit lagi untuk "${item.item_name}".`;
+      req.session.success = `${parsedQuantity} label (${labelRange}) berhasil dibuat di ruangan "${room.name}".${replacementNote} Sisa ${remainingAfter} unit lagi untuk "${item.item_name}".`;
+      if (roomMismatchWarning) {
+        req.session.error = roomMismatchWarning;
+      }
       return res.redirect(`/administration/inventories/create?item=${item.id}`);
     }
 
-    req.session.success = `${parsedQuantity} label (${labelRange}) berhasil dibuat di ruangan "${room.name}". Semua unit "${item.item_name}" sudah berlabel.`;
+    req.session.success = `${parsedQuantity} label (${labelRange}) berhasil dibuat di ruangan "${room.name}".${replacementNote} Semua unit "${item.item_name}" sudah berlabel.`;
+    if (roomMismatchWarning) {
+      req.session.error = roomMismatchWarning;
+    }
     return res.redirect('/administration/inventories');
   } catch (error) {
     next(error);

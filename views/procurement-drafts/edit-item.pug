@@ -24,8 +24,14 @@ block content
   if error
     .alert.alert-danger.alert-dismissible.fade.show(role="alert")
       i.fa.fa-exclamation-circle.me-2
-      strong Error! 
+      strong Error!
       = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if warning
+    .alert.alert-warning.alert-dismissible.fade.show(role="alert")
+      i.ti.ti-alert-triangle.me-2
+      strong Peringatan!
+      = warning
       button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
 
   .row
@@ -57,13 +63,14 @@ block content
               .col-12.mb-3
                 label.form-label(for="purchase_link") Link Pembelian
                 input#purchase_link.form-control(type="url" name="purchase_link" placeholder="https://..." value=item.purchase_link || '')
-              .col-12.mb-4
-                label.form-label(for="replacement_inventory_id") Pengganti Inventaris Rusak / Maintenance
-                select#replacement_inventory_id.form-select(name="replacement_inventory_id")
-                  option(value="" selected=!item.replacement_inventory_id) Tidak mengganti inventaris lama
-                  if damagedInventories && damagedInventories.length > 0
-                    each inventory in damagedInventories
-                      option(value=inventory.id selected=(item.replacement_inventory_id == inventory.id))= `${inventory.label_number || '-'} - ${inventory.name} (${inventory.condition})`
+              .col-12.mb-3#replacement_section(style=(item.item_type === 'BHP' ? 'display: none;' : ''))
+                label.form-label Pengganti Inventaris Rusak / Maintenance
+                - const selectedReplacementIds = (item.replacementTargets || []).map((t) => String(t.inventory_id))
+                - if (item.replacement_inventory_id && !selectedReplacementIds.includes(String(item.replacement_inventory_id)))
+                  - selectedReplacementIds.push(String(item.replacement_inventory_id))
+                include ../partials/replacement-inventory-picker
+                label.form-label.mt-3(for="replacement_reason") Alasan Penggantian
+                textarea#replacement_reason.form-control(name="replacement_reason" rows="3" placeholder="Jelaskan mengapa barang lama perlu diganti...")= item.replacement_reason || ''
 
             .d-flex.align-items-center.gap-2
               button.btn.btn-primary(type="submit")
@@ -72,11 +79,13 @@ block content
               a.btn.btn-outline-secondary(href=`/procurement-drafts/${draft.id}`) Kembali
 
 block scripts
+  script(src="/js/replacement-inventory-picker.js")
   script.
     document.addEventListener('DOMContentLoaded', function () {
       const itemTypeSelect = document.getElementById('item_type');
       const unitField = document.getElementById('bhp_unit_field');
       const unitInput = document.getElementById('unit');
+      const replacementSection = document.getElementById('replacement_section');
 
       function toggleUnitField() {
         const isBhp = itemTypeSelect && itemTypeSelect.value === 'BHP';
@@ -88,6 +97,12 @@ block scripts
           if (isBhp && !unitInput.value.trim()) {
             unitInput.value = 'pcs';
           }
+        }
+        if (replacementSection) {
+          replacementSection.style.display = isBhp ? 'none' : '';
+        }
+        if (window.setReplacementPickerEnabled) {
+          window.setReplacementPickerEnabled(!isBhp, replacementSection);
         }
       }
 

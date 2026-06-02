@@ -41,6 +41,7 @@ block content
             tr
               th.border-bottom-0.fw-semibold No
               th.border-bottom-0.fw-semibold Nama Barang
+              th.border-bottom-0.fw-semibold Jenis
               th.border-bottom-0.fw-semibold Tahun
               th.border-bottom-0.fw-semibold Progress Label
               th.border-bottom-0.fw-semibold.text-center Aksi
@@ -51,6 +52,15 @@ block content
                   td.border-bottom-0= index + 1
                   td.border-bottom-0
                     h6.fw-semibold.mb-0= entry.item.item_name
+                  td.border-bottom-0
+                    if entry.isReplacement
+                      span.badge.bg-light-warning.text-warning.fw-semibold
+                        i.ti.ti-replace.me-1
+                        | Penggantian
+                      if entry.pendingReplacementCount > 0
+                        small.text-muted.d-block= `${entry.pendingReplacementCount} belum terhubung`
+                    else
+                      span.text-muted Baru
                   td.border-bottom-0= entry.item.draft ? entry.item.draft.year : '-'
                   td.border-bottom-0
                     span= `${entry.labeled} / ${entry.received} berlabel`
@@ -62,7 +72,7 @@ block content
                       | Input Label
             else
               tr
-                td.text-center.py-4(colspan="5")
+                td.text-center.py-4(colspan="6")
                   if hasAnyReceipt
                     | Semua unit yang sudah diterima sudah memiliki label.
                   else
@@ -78,30 +88,45 @@ block content
       //- Filter Form
       form(method="GET" action="/administration/inventories" class="row g-3 mb-4 align-items-end border p-3 rounded bg-light")
         .col-md-3
+          label.form-label.fw-semibold Cari Nama Barang
+          input.form-control(type="text" name="q" value=selectedQ placeholder="Contoh: Kursi, Monitor...")
+        .col-md-3
+          label.form-label.fw-semibold Nomor Label
+          input.form-control(type="text" name="label" value=selectedLabel placeholder="Contoh: LAB-INV-2026-001")
+        .col-md-2
           label.form-label.fw-semibold Ruangan
           select.form-select(name="room_id")
             option(value="") -- Semua Ruangan --
             each room in (rooms || [])
               option(value=room.id selected=(String(selectedRoomId) === String(room.id)))= room.name
-        .col-md-3
+        .col-md-2
           label.form-label.fw-semibold Kategori
           select.form-select(name="category_id")
             option(value="") -- Semua Kategori --
             each cat in (categories || [])
               option(value=cat.id selected=(String(selectedCategoryId) === String(cat.id)))= cat.name
-        .col-md-3
-          label.form-label.fw-semibold Tahun Pengadaan
+        .col-md-2
+          label.form-label.fw-semibold Tahun
           select.form-select(name="year")
             option(value="") -- Semua Tahun --
             each y in (years || [])
               option(value=y selected=(String(selectedYear) === String(y)))= y
-        .col-md-3.d-flex.gap-2
-          button.btn.btn-primary.w-100(type="submit")
-            i.ti.ti-filter.me-1
-            | Filter
-          a.btn.btn-outline-secondary.w-100(href="/administration/inventories")
+        .col-12.d-flex.gap-2.justify-content-end
+          button.btn.btn-primary(type="submit")
+            i.ti.ti-search.me-1
+            | Cari
+          a.btn.btn-outline-secondary(href="/administration/inventories")
             i.ti.ti-refresh.me-1
             | Reset
+
+      if selectedLabel || selectedQ
+        .alert.alert-info.py-2.mb-3
+          i.ti.ti-filter.me-1
+          | Menampilkan hasil filter
+          if selectedQ
+            |  nama barang mengandung "#{selectedQ}"
+          if selectedLabel
+            |  nomor label mengandung "#{selectedLabel}"
 
       .table-responsive.mt-2
         table.table.align-middle.text-nowrap.mb-0
