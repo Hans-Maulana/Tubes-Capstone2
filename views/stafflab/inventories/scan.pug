@@ -1,0 +1,136 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Scan QR Inventaris
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/stafflab/inventories") Kelola Inventaris
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Scan QR
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error!
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row.justify-content-center
+    .col-lg-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-2 Pindai QR Code Barang
+          p.card-subtitle.mb-4 Arahkan kamera ke QR code label inventaris. Setelah terbaca, Anda akan diarahkan ke Kelola Inventaris dengan filter nomor label tersebut.
+
+          #qr-reader.rounded.border.mb-3(style="max-width: 100%;")
+          #qr-status.alert.alert-info.mb-3 Menunggu akses kamera...
+
+          .d-flex.gap-2.flex-wrap
+            a.btn.btn-outline-secondary(href="/stafflab/inventories")
+              i.ti.ti-arrow-left.me-1
+              | Kembali ke Daftar
+            button#btn-stop-scan.btn.btn-outline-danger(type="button" style="display: none;")
+              i.ti.ti-player-stop.me-1
+              | Hentikan Scan
+
+block scripts
+  script(src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js")
+  script.
+    document.addEventListener('DOMContentLoaded', function () {
+      const statusEl = document.getElementById('qr-status');
+      const stopBtn = document.getElementById('btn-stop-scan');
+      let html5QrCode = null;
+      let isProcessing = false;
+
+      function extractLabel(decodedText) {
+        const text = (decodedText || '').trim();
+        if (!text) return '';
+
+        if (text.includes('/inventory-label/')) {
+          const parts = text.split('/inventory-label/');
+          return decodeURIComponent(parts[parts.length - 1].split(/[?#]/)[0]);
+        }
+
+        return text;
+      }
+
+      function onScanSuccess(decodedText) {
+        if (isProcessing) return;
+        isProcessing = true;
+
+        const label = extractLabel(decodedText);
+        if (!label) {
+          statusEl.className = 'alert alert-warning mb-3';
+          statusEl.textContent = 'QR code tidak valid. Coba scan ulang.';
+          isProcessing = false;
+          return;
+        }
+
+        statusEl.className = 'alert alert-success mb-3';
+        statusEl.textContent = `QR terbaca: ${label}. Mencari inventaris...`;
+
+        if (html5QrCode) {
+          html5QrCode.stop().catch(function () {});
+        }
+
+        window.location.href = '/stafflab/inventories?label=' + encodeURIComponent(label);
+      }
+
+      function onScanFailure() {
+        // Abaikan error frame-by-frame agar tidak spam
+      }
+
+      if (typeof Html5Qrcode === 'undefined') {
+        statusEl.className = 'alert alert-danger mb-3';
+        statusEl.textContent = 'Gagal memuat library scan QR. Periksa koneksi internet.';
+        return;
+      }
+
+      html5QrCode = new Html5Qrcode('qr-reader');
+
+      Html5Qrcode.getCameras()
+        .then(function (cameras) {
+          if (!cameras || cameras.length === 0) {
+            statusEl.className = 'alert alert-danger mb-3';
+            statusEl.textContent = 'Kamera tidak ditemukan. Pastikan perangkat memiliki kamera dan izin sudah diberikan.';
+            return;
+          }
+
+          const cameraId = cameras[0].id;
+          statusEl.className = 'alert alert-info mb-3';
+          statusEl.textContent = 'Kamera aktif. Arahkan ke QR code inventaris.';
+          stopBtn.style.display = 'inline-block';
+
+          return html5QrCode.start(
+            cameraId,
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            onScanSuccess,
+            onScanFailure
+          );
+        })
+        .catch(function (err) {
+          statusEl.className = 'alert alert-danger mb-3';
+          statusEl.textContent = 'Gagal mengakses kamera: ' + (err.message || err);
+        });
+
+      stopBtn.addEventListener('click', function () {
+        if (html5QrCode) {
+          html5QrCode.stop().then(function () {
+            window.location.href = '/stafflab/inventories';
+          }).catch(function () {
+            window.location.href = '/stafflab/inventories';
+          });
+        }
+      });
+    });

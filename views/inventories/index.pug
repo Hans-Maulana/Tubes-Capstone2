@@ -28,19 +28,28 @@ block content
             
           //- Filter Form
           form(method="GET" action="/inventories" class="row g-3 mb-4 align-items-end border p-3 rounded bg-light")
-            .col-md-4
+            .col-md-3
               label.form-label.fw-semibold Ruangan
               select.form-select(name="room_id")
                 option(value="") -- Semua Ruangan --
                 each room in (rooms || [])
                   option(value=room.id selected=(String(selectedRoomId) === String(room.id)))= room.name
-            .col-md-4
+            .col-md-3
+              label.form-label.fw-semibold Kategori
+              select.form-select(name="category_id")
+                option(value="") -- Semua Kategori --
+                each cat in (categories || [])
+                  option(value=cat.id selected=(String(selectedCategoryId) === String(cat.id)))= cat.name
+            .col-md-2
               label.form-label.fw-semibold Tahun Pengadaan
               select.form-select(name="year")
                 option(value="") -- Semua Tahun --
                 each y in (years || [])
                   option(value=y selected=(String(selectedYear) === String(y)))= y
-            .col-md-4.d-flex.gap-2
+            .col-md-2
+              label.form-label.fw-semibold Nomor Label
+              input.form-control(type="text" name="label" value=selectedLabel placeholder="Cari nomor label...")
+            .col-md-2.d-flex.gap-2
               button.btn.btn-primary.w-100(type="submit")
                 i.ti.ti-filter.me-1
                 | Filter
@@ -71,7 +80,7 @@ block content
                       td.border-bottom-0
                         h6.fw-semibold.mb-0= inv.name || (inv.procurementItem ? inv.procurementItem.item_name : '-')
                       td.border-bottom-0
-                        span.badge.bg-light-primary.text-primary.fw-semibold= inv.category || '-'
+                        span.badge.bg-light-primary.text-primary.fw-semibold= inv.itemCategory ? inv.itemCategory.name : (inv.category || '-')
                       td.border-bottom-0= inv.procurementItem && inv.procurementItem.draft ? inv.procurementItem.draft.year : '-'
                       td.border-bottom-0
                         span.badge.bg-light-secondary.text-secondary.fw-semibold= inv.room ? inv.room.name : '-'

@@ -1,0 +1,70 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Ubah Kondisi & Ruangan
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/stafflab/inventories") Kelola Inventaris
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Ubah
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error!
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Perbarui Inventaris
+          p.card-subtitle.mb-3
+            | Staf laboratorium hanya dapat mengubah 
+            strong kondisi 
+            | dan 
+            strong ruangan 
+            | barang inventaris.
+
+          .row.mb-4
+            .col-md-6.mb-3
+              p.text-muted.mb-1 Nomor Label
+              h6.fw-semibold.mb-0= inventory.label_number
+            .col-md-6.mb-3
+              p.text-muted.mb-1 Nama Barang
+              h6.fw-semibold.mb-0= inventory.name || (inventory.procurementItem ? inventory.procurementItem.item_name : '-')
+            if inventory.qr_image_path
+              .col-md-6.mb-3
+                p.text-muted.mb-1 QR Code
+                img.rounded.border(src=inventory.qr_image_path alt=`QR ${inventory.label_number}` style="width: 96px; height: 96px; object-fit: cover;")
+
+          form(action=`/stafflab/inventories/${inventory.id}/edit` method="POST")
+            .row
+              .col-md-6.mb-3
+                label.form-label Kondisi
+                select.form-select(name="condition" required)
+                  each cond in (conditions || [])
+                    option(value=cond selected=(inventory.condition === cond))= cond
+              .col-md-6.mb-3
+                label.form-label Ruangan
+                select.form-select(name="room_id" required)
+                  option(value="" disabled selected=(!inventory.room_id)) -- Pilih Ruangan --
+                  each room in (rooms || [])
+                    option(value=room.id selected=(String(inventory.room_id) === String(room.id)))= room.name
+            .d-flex.gap-2
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-device-floppy.me-1
+                | Simpan Perubahan
+              a.btn.btn-outline-secondary(href="/stafflab/inventories") Batal

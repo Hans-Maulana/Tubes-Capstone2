@@ -15,6 +15,14 @@ const Inventory = sequelize.define('Inventory', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  category_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'item_categories',
+      key: 'id'
+    }
+  },
   purchase_date: {
     type: DataTypes.DATEONLY,
     allowNull: true
@@ -61,6 +69,9 @@ module.exports = Inventory;
 
 // Relasi
 const Room = require('./Room');
+const ItemCategory = require('./ItemCategory');
 
 Inventory.belongsTo(Room, { foreignKey: 'room_id', as: 'room' });
 Room.hasMany(Inventory, { foreignKey: 'room_id', as: 'inventories' });
+Inventory.belongsTo(ItemCategory, { foreignKey: 'category_id', as: 'itemCategory' });
+ItemCategory.hasMany(Inventory, { foreignKey: 'category_id', as: 'inventories' });

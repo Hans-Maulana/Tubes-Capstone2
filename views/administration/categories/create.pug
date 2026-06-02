@@ -1,0 +1,45 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Tambah Kategori Barang
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/administration/categories") Kategori Barang
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Tambah
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error!
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-4 Formulir Tambah Kategori
+          form(action="/administration/categories" method="POST")
+            .mb-3
+              label.form-label Nama Kategori
+              input.form-control(type="text" name="name" placeholder="Contoh: Elektronik, Komputer, Furniture" required value=(formData.name || ''))
+            .mb-4
+              label.form-label Deskripsi
+              textarea.form-control(name="description" rows="3" placeholder="Keterangan singkat kategori barang")= formData.description || ''
+            .d-flex.gap-2
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-device-floppy.me-1
+                | Simpan
+              a.btn.btn-outline-secondary(href="/administration/categories") Batal

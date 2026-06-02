@@ -96,6 +96,7 @@ block content
                   th.border-bottom-0.fw-semibold Jenis
                   th.border-bottom-0.fw-semibold Nama Barang
                   th.border-bottom-0.fw-semibold Jumlah
+                  th.border-bottom-0.fw-semibold Satuan
                   th.border-bottom-0.fw-semibold Harga
                   th.border-bottom-0.fw-semibold Link
                   th.border-bottom-0.fw-semibold Pengganti
@@ -113,6 +114,11 @@ block content
                       td.border-bottom-0
                         h6.fw-semibold.mb-0= item.item_name || '-'
                       td.border-bottom-0= item.quantity || 0
+                      td.border-bottom-0
+                        if item.item_type === 'BHP'
+                          span.badge.bg-light-secondary.text-secondary.fw-semibold= item.unit || 'pcs'
+                        else
+                          span.text-muted -
                       td.border-bottom-0= `Rp ${Number(item.price || 0).toLocaleString('id-ID')}`
                       td.border-bottom-0
                         if item.purchase_link
@@ -149,7 +155,7 @@ block content
                                 i.ti.ti-trash
                 else
                   tr
-                    td.text-center.py-4(colspan=(draft.status !== 'Draft' ? (locked ? 8 : 9) : (locked ? 7 : 8))) Belum ada item pengadaan.
+                    td.text-center.py-4(colspan=(draft.status !== 'Draft' ? (locked ? 9 : 10) : (locked ? 8 : 9))) Belum ada item pengadaan.
 
   if !locked
     // Add Item Modal
@@ -174,6 +180,10 @@ block content
                 .col-md-6.mb-3
                   label.form-label(for="quantity") Jumlah
                   input#quantity.form-control(type="number" name="quantity" min="1" required)
+                .col-md-6.mb-3#bhp_unit_field(style="display: none;")
+                  label.form-label(for="unit") Satuan BHP
+                  input#unit.form-control(type="text" name="unit" value="pcs" placeholder="Contoh: pcs, botol, roll")
+                  p.small.text-muted.mb-0 Default: pcs
                 .col-md-6.mb-3
                   label.form-label(for="price") Harga Satuan
                   input#price.form-control(type="number" name="price" min="0" required)
@@ -192,4 +202,30 @@ block content
               button.btn.btn-primary(type="submit")
                 i.ti.ti-plus.me-1
                 | Tambah Item
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function () {
+      const itemTypeSelect = document.getElementById('item_type');
+      const unitField = document.getElementById('bhp_unit_field');
+      const unitInput = document.getElementById('unit');
+
+      function toggleUnitField() {
+        const isBhp = itemTypeSelect && itemTypeSelect.value === 'BHP';
+        if (unitField) {
+          unitField.style.display = isBhp ? '' : 'none';
+        }
+        if (unitInput) {
+          unitInput.required = isBhp;
+          if (isBhp && !unitInput.value.trim()) {
+            unitInput.value = 'pcs';
+          }
+        }
+      }
+
+      if (itemTypeSelect) {
+        itemTypeSelect.addEventListener('change', toggleUnitField);
+        toggleUnitField();
+      }
+    });
 

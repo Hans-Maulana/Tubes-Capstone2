@@ -21,6 +21,12 @@ aside.left-sidebar
             i.ti.ti-layout-dashboard
             span.hide-menu Dashboard
 
+        if user
+          li.sidebar-item
+            a.sidebar-link(href="/inventories" aria-expanded="false")
+              i.ti.ti-packages
+              span.hide-menu Daftar Inventaris
+
         if user && user.role === 'Kepala Laboratorium'
           li.nav-small-cap
             iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
@@ -56,6 +62,10 @@ aside.left-sidebar
             a.sidebar-link(href="/administration/inventories" aria-expanded="false")
               i.ti.ti-qrcode
               span.hide-menu Input Inventaris
+          li.sidebar-item
+            a.sidebar-link(href="/administration/categories" aria-expanded="false")
+              i.ti.ti-category
+              span.hide-menu Kategori Barang
         
         if user && user.role === 'Staf Laboratorium'
           li.nav-small-cap
@@ -69,6 +79,14 @@ aside.left-sidebar
             a.sidebar-link(href="/stafflab/maintenance" aria-expanded="false")
               i.ti.ti-tool
               span.hide-menu Log Maintenance
+          li.sidebar-item
+            a.sidebar-link(href="/stafflab/inventories" aria-expanded="false")
+              i.ti.ti-edit
+              span.hide-menu Kelola Inventaris
+          li.sidebar-item
+            a.sidebar-link(href="/stafflab/inventories/scan" aria-expanded="false")
+              i.ti.ti-scan
+              span.hide-menu Scan QR Inventaris
         
         if user && user.role === 'Administrator'
           li.nav-small-cap

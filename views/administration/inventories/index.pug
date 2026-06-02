@@ -33,7 +33,7 @@ block content
   .card.w-100.mb-4
     .card-body
       h5.card-title.fw-semibold.mb-1 Item Menunggu Label
-      p.card-subtitle.mb-4 Hanya barang yang sudah dicatat di Penerimaan Barang yang bisa diberi label (1 unit diterima = 1 label = 1 QR).
+      p.card-subtitle.mb-4 Hanya barang yang sudah dicatat di Penerimaan Barang yang bisa diberi label. Input per batch ruangan: tentukan berapa unit masuk ke ruangan yang sama sekaligus.
 
       .table-responsive
         table.table.align-middle.text-nowrap.mb-0
@@ -77,19 +77,25 @@ block content
 
       //- Filter Form
       form(method="GET" action="/administration/inventories" class="row g-3 mb-4 align-items-end border p-3 rounded bg-light")
-        .col-md-4
+        .col-md-3
           label.form-label.fw-semibold Ruangan
           select.form-select(name="room_id")
             option(value="") -- Semua Ruangan --
             each room in (rooms || [])
               option(value=room.id selected=(String(selectedRoomId) === String(room.id)))= room.name
-        .col-md-4
+        .col-md-3
+          label.form-label.fw-semibold Kategori
+          select.form-select(name="category_id")
+            option(value="") -- Semua Kategori --
+            each cat in (categories || [])
+              option(value=cat.id selected=(String(selectedCategoryId) === String(cat.id)))= cat.name
+        .col-md-3
           label.form-label.fw-semibold Tahun Pengadaan
           select.form-select(name="year")
             option(value="") -- Semua Tahun --
             each y in (years || [])
               option(value=y selected=(String(selectedYear) === String(y)))= y
-        .col-md-4.d-flex.gap-2
+        .col-md-3.d-flex.gap-2
           button.btn.btn-primary.w-100(type="submit")
             i.ti.ti-filter.me-1
             | Filter
@@ -104,6 +110,7 @@ block content
               th.border-bottom-0.fw-semibold No
               th.border-bottom-0.fw-semibold Nomor Label
               th.border-bottom-0.fw-semibold Nama Barang
+              th.border-bottom-0.fw-semibold Kategori
               th.border-bottom-0.fw-semibold Tahun
               th.border-bottom-0.fw-semibold Ruangan
               th.border-bottom-0.fw-semibold QR
@@ -116,6 +123,8 @@ block content
                   td.border-bottom-0
                     h6.fw-semibold.mb-0= inv.label_number || '-'
                   td.border-bottom-0= inv.name || (inv.procurementItem ? inv.procurementItem.item_name : '-')
+                  td.border-bottom-0
+                    span.badge.bg-light-primary.text-primary.fw-semibold= inv.itemCategory ? inv.itemCategory.name : (inv.category || '-')
                   td.border-bottom-0= inv.procurementItem && inv.procurementItem.draft ? inv.procurementItem.draft.year : '-'
                   td.border-bottom-0
                     span.badge.bg-light-secondary.text-secondary.fw-semibold= inv.room ? inv.room.name : '-'
@@ -134,4 +143,4 @@ block content
                           i.ti.ti-trash
             else
               tr
-                td.text-center.py-4(colspan="6") Belum ada inventaris berlabel.
+                td.text-center.py-4(colspan="8") Belum ada inventaris berlabel.

@@ -12,6 +12,7 @@ const adminStaffCheck = require('../middlewares/adminStaffCheck');
 const roleCheck = require('../middlewares/roleCheck');
 const staffLabController = require('../controllers/staffLabController');
 const inventoryController = require('../controllers/inventoryController');
+const categoryController = require('../controllers/categoryController');
 
 // Define main/landing route
 // router.get('/', homeController.getHome);
@@ -74,6 +75,13 @@ router.get('/administration/inventories/:id/edit', authCheck, adminStaffCheck, a
 router.post('/administration/inventories/:id/edit', authCheck, adminStaffCheck, administrationController.postUpdateInventory);
 router.post('/administration/inventories/:id/delete', authCheck, adminStaffCheck, administrationController.postDeleteInventory);
 
+router.get('/administration/categories', authCheck, adminStaffCheck, categoryController.getCategories);
+router.get('/administration/categories/create', authCheck, adminStaffCheck, categoryController.getCreateCategory);
+router.post('/administration/categories', authCheck, adminStaffCheck, categoryController.postCreateCategory);
+router.get('/administration/categories/:id/edit', authCheck, adminStaffCheck, categoryController.getEditCategory);
+router.post('/administration/categories/:id/edit', authCheck, adminStaffCheck, categoryController.postUpdateCategory);
+router.post('/administration/categories/:id/delete', authCheck, adminStaffCheck, categoryController.postDeleteCategory);
+
 // --- Staff Laboratorium Routes ---
 router.get('/stafflab/bhps', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getBhps);
 router.get('/stafflab/bhps/create', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getCreateBhp);
@@ -85,5 +93,17 @@ router.post('/stafflab/bhps/:id/delete', authCheck, roleCheck('Staf Laboratorium
 router.get('/stafflab/maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getMaintenanceLogs);
 router.get('/stafflab/maintenance/create', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getCreateMaintenanceLog);
 router.post('/stafflab/maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postCreateMaintenanceLog);
+router.get('/stafflab/maintenance/:id', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getMaintenanceLogDetail);
+
+router.get('/stafflab/inventories', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getInventories);
+router.get('/stafflab/inventories/scan', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getScanInventory);
+router.get('/stafflab/inventories/lookup', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getInventoryLookup);
+router.post('/stafflab/inventories/:id/start-maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postStartMaintenance);
+router.get('/stafflab/inventories/:id/move-room', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getMoveRoom);
+router.post('/stafflab/inventories/:id/move-room', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postMoveRoom);
+router.get('/stafflab/inventories/:id/complete-maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getCompleteMaintenance);
+router.post('/stafflab/inventories/:id/complete-maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postCompleteMaintenance);
+router.get('/stafflab/inventories/:id/edit', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getEditInventory);
+router.post('/stafflab/inventories/:id/edit', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postUpdateInventory);
 
 module.exports = router;

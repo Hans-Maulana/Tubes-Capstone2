@@ -23,6 +23,10 @@ const ProcurementItem = sequelize.define('ProcurementItem', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  unit: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   quantity: {
     type: DataTypes.INTEGER,
     allowNull: true

@@ -34,6 +34,7 @@ module.exports = {
       {
         item_type: 'BHP',
         item_name: 'Thermal Paste',
+        unit: 'tube',
         quantity: 24,
         price: 120000,
         status: 'Approved'

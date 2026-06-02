@@ -1,0 +1,55 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Pindah Ruangan
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/stafflab/inventories") Kelola Inventaris
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Pindah Ruangan
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error!
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-3 Pindahkan Inventaris
+          p.card-subtitle.mb-4 Hanya mengubah ruangan penempatan barang.
+
+          .mb-4
+            p.text-muted.mb-1 Nomor Label
+            h6.fw-semibold.mb-0= inventory.label_number
+            p.text-muted.mb-1.mt-2 Nama Barang
+            h6.fw-semibold.mb-0= inventory.name
+            p.text-muted.mb-1.mt-2 Ruangan Saat Ini
+            h6.fw-semibold.mb-0= inventory.room ? inventory.room.name : '-'
+
+          form(action=`/stafflab/inventories/${inventory.id}/move-room` method="POST")
+            .mb-4
+              label.form-label Ruangan Baru
+              select.form-select(name="room_id" required)
+                option(value="" disabled selected=(!inventory.room_id)) -- Pilih Ruangan --
+                each room in (rooms || [])
+                  option(value=room.id selected=(String(inventory.room_id) === String(room.id)))= room.name
+            .d-flex.gap-2
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-door.me-1
+                | Simpan Ruangan
+              a.btn.btn-outline-secondary(href="/stafflab/inventories") Batal

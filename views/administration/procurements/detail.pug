@@ -63,6 +63,8 @@ block content
                   h5.card-title.fw-semibold.mb-1= item.item_name || '-'
                   p.card-subtitle.mb-0
                     span.badge.bg-light-primary.text-primary.fw-semibold.me-2= item.item_type || '-'
+                    if item.item_type === 'BHP'
+                      span.badge.bg-light-secondary.text-secondary.fw-semibold.me-2= item.unit || 'pcs'
                     | #{receivedTotal} dari #{item.quantity || 0} barang diterima
                 if remaining <= 0
                   span.badge.bg-success.rounded-3.fw-semibold Lengkap
@@ -74,7 +76,7 @@ block content
                 .row
                   .col-md-6.mb-3
                     label.form-label Tanggal Diterima
-                    input.form-control(type="date" name="received_date" required disabled=(remaining <= 0))
+                    input.form-control(type="date" name="received_date" value=today required disabled=(remaining <= 0))
                   .col-md-6.mb-3
                     label.form-label Jumlah Diterima
                     input.form-control(type="number" name="quantity_received" min="1" max=remaining value=(remaining > 0 ? 1 : 0) required disabled=(remaining <= 0))

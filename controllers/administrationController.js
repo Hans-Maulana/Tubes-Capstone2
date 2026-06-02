@@ -1,8 +1,26 @@
 const { Op } = require('sequelize');
-const { ProcurementDraft, ProcurementItem, ProcurementReceipt, Inventory, InventoryReplacement, User, Bhp, Room } = require('../models');
+const { ProcurementDraft, ProcurementItem, ProcurementReceipt, Inventory, InventoryReplacement, User, Bhp, Room, ItemCategory, sequelize } = require('../models');
 const QRCode = require('qrcode');
+const { generateNextLabelNumber, generateLabelNumbers } = require('../utils/inventoryLabel');
 
 const INVENTORY_CONDITIONS = new Set(['Baik', 'Rusak', 'Maintenance']);
+
+async function loadCreateInventoryFormData(item, formData = {}) {
+  const progress = getLabelProgress(item);
+  const rooms = await Room.findAll({ order: [['name', 'ASC']] });
+  const categories = await ItemCategory.findAll({ order: [['name', 'ASC']] });
+  const draftYear = item.draft ? item.draft.year : new Date().getFullYear();
+  const suggestedLabel = await generateNextLabelNumber(draftYear);
+
+  return {
+    progress,
+    rooms,
+    categories,
+    suggestedLabel,
+    draftYear,
+    formData
+  };
+}
 
 async function generateQrDataUrl(req, labelNumber) {
   const scanUrl = `${req.protocol}://${req.get('host')}/inventory-label/${encodeURIComponent(labelNumber)}`;
@@ -311,6 +329,7 @@ exports.getApprovedDraftDetail = async (req, res, next) => {
     return res.render('administration/procurements/detail', {
       title: `Administrasi Pengadaan ${draft.year} - Sistem Inventaris Laboratorium`,
       draft,
+      today: new Date().toISOString().substring(0, 10),
       success: req.session.success || null,
       error: req.session.error || null
     });
@@ -355,9 +374,10 @@ exports.postCreateReceipt = async (req, res, next) => {
 
     // Untuk BHP: tidak buat inventories/QR, cukup update stok di tabel bhps.
     if (item.item_type === 'BHP') {
+      const bhpUnit = item.unit || 'pcs';
       const [bhp] = await Bhp.findOrCreate({
         where: { name: item.item_name },
-        defaults: { unit: 'pcs', stock: 0 }
+        defaults: { unit: bhpUnit, stock: 0 }
       });
       await bhp.increment('stock', { by: quantity });
     }
@@ -371,7 +391,7 @@ exports.postCreateReceipt = async (req, res, next) => {
 
 exports.getInventories = async (req, res, next) => {
   try {
-    const { room_id, year } = req.query;
+    const { room_id, year, category_id } = req.query;
 
     const pendingItems = await getEligibleInventarisItems();
 
@@ -391,6 +411,9 @@ exports.getInventories = async (req, res, next) => {
     if (room_id) {
       inventoryWhere.room_id = parseInt(room_id, 10);
     }
+    if (category_id) {
+      inventoryWhere.category_id = parseInt(category_id, 10);
+    }
 
     const draftWhere = { status: 'Approved' };
     if (year) {
@@ -401,6 +424,7 @@ exports.getInventories = async (req, res, next) => {
       where: inventoryWhere,
       include: [
         { model: Room, as: 'room' },
+        { model: ItemCategory, as: 'itemCategory' },
         {
           model: ProcurementItem,
           as: 'procurementItem',
@@ -430,6 +454,7 @@ exports.getInventories = async (req, res, next) => {
     });
     const years = distinctDrafts.map(d => d.year);
     const rooms = await Room.findAll({ order: [['name', 'ASC']] });
+    const categories = await ItemCategory.findAll({ order: [['name', 'ASC']] });
 
     res.render('administration/inventories/index', {
       title: 'Input Inventaris - Sistem Inventaris Laboratorium',
@@ -437,9 +462,11 @@ exports.getInventories = async (req, res, next) => {
       hasAnyReceipt,
       inventories,
       rooms,
+      categories,
       years,
       selectedRoomId: room_id || '',
       selectedYear: year || '',
+      selectedCategoryId: category_id || '',
       success: req.session.success || null,
       error: req.session.error || null
     });
@@ -476,15 +503,13 @@ exports.getCreateInventory = async (req, res, next) => {
       return res.redirect('/administration/inventories');
     }
 
-    const rooms = await Room.findAll({ order: [['name', 'ASC']] });
+    const formContext = await loadCreateInventoryFormData(item);
 
     return res.render('administration/inventories/create', {
       title: 'Input Label Inventaris - Sistem Inventaris Laboratorium',
       selectedItem: item,
-      progress,
-      rooms,
-      error: null,
-      formData: {}
+      ...formContext,
+      error: null
     });
   } catch (error) {
     next(error);
@@ -492,7 +517,7 @@ exports.getCreateInventory = async (req, res, next) => {
 };
 
 exports.postCreateInventory = async (req, res, next) => {
-  const { procurement_item_id, label_number, condition, room_id } = req.body;
+  const { procurement_item_id, condition, room_id, category_id, quantity } = req.body;
 
   try {
     const item = await findApprovedInventarisItem(procurement_item_id);
@@ -503,120 +528,123 @@ exports.postCreateInventory = async (req, res, next) => {
 
     const normalizedCondition = condition || 'Baik';
     const parsedRoomId = room_id ? parseInt(room_id, 10) : null;
+    const parsedCategoryId = category_id ? parseInt(category_id, 10) : null;
+    const parsedQuantity = parseInt(quantity, 10) || 1;
 
-    if (!label_number) {
-      const progress = getLabelProgress(item);
-      const rooms = await Room.findAll({ order: [['name', 'ASC']] });
-
+    const renderCreateForm = async (error, formData = {}) => {
+      const formContext = await loadCreateInventoryFormData(item, formData);
       return res.render('administration/inventories/create', {
         title: 'Input Label Inventaris - Sistem Inventaris Laboratorium',
         selectedItem: item,
-        progress,
-        rooms,
-        error: 'Nomor label inventaris wajib diisi.',
-        formData: { label_number, condition: normalizedCondition, room_id: room_id || '' }
+        ...formContext,
+        error
       });
+    };
+
+    const baseFormData = {
+      condition: normalizedCondition,
+      room_id: room_id || '',
+      category_id: category_id || '',
+      quantity: parsedQuantity
+    };
+
+    if (!parsedCategoryId) {
+      return renderCreateForm('Kategori barang wajib dipilih.', baseFormData);
     }
 
     if (!INVENTORY_CONDITIONS.has(normalizedCondition)) {
-      const progress = getLabelProgress(item);
-      const rooms = await Room.findAll({ order: [['name', 'ASC']] });
-      return res.render('administration/inventories/create', {
-        title: 'Input Label Inventaris - Sistem Inventaris Laboratorium',
-        selectedItem: item,
-        progress,
-        rooms,
-        error: 'Kondisi inventaris tidak valid.',
-        formData: { label_number, condition: normalizedCondition, room_id: room_id || '' }
-      });
+      return renderCreateForm('Kondisi inventaris tidak valid.', baseFormData);
     }
 
     if (!parsedRoomId) {
-      const progress = getLabelProgress(item);
-      const rooms = await Room.findAll({ order: [['name', 'ASC']] });
-      return res.render('administration/inventories/create', {
-        title: 'Input Label Inventaris - Sistem Inventaris Laboratorium',
-        selectedItem: item,
-        progress,
-        rooms,
-        error: 'Ruangan wajib dipilih.',
-        formData: { label_number, condition: normalizedCondition, room_id: room_id || '' }
-      });
+      return renderCreateForm('Ruangan wajib dipilih.', baseFormData);
     }
 
     const room = await Room.findByPk(parsedRoomId);
     if (!room) {
-      const progress = getLabelProgress(item);
-      const rooms = await Room.findAll({ order: [['name', 'ASC']] });
-      return res.render('administration/inventories/create', {
-        title: 'Input Label Inventaris - Sistem Inventaris Laboratorium',
-        selectedItem: item,
-        progress,
-        rooms,
-        error: 'Ruangan tidak ditemukan.',
-        formData: { label_number, condition: normalizedCondition, room_id: room_id || '' }
-      });
+      return renderCreateForm('Ruangan tidak ditemukan.', baseFormData);
+    }
+
+    const itemCategory = await ItemCategory.findByPk(parsedCategoryId);
+    if (!itemCategory) {
+      return renderCreateForm('Kategori barang tidak ditemukan.', baseFormData);
     }
 
     const inventoryTotal = (item.receivedInventories || []).length;
     const receivedTotal = getReceivedTotal(item);
+    const remaining = receivedTotal - inventoryTotal;
 
     if (receivedTotal <= 0) {
       req.session.error = 'Barang belum dicatat penerimaannya. Lakukan penerimaan barang terlebih dahulu.';
       return res.redirect('/administration/inventories');
     }
 
-    if (inventoryTotal >= receivedTotal) {
+    if (remaining <= 0) {
       req.session.error = 'Jumlah label sudah sama dengan jumlah barang yang diterima.';
       return res.redirect(`/administration/inventories/create?item=${item.id}`);
     }
 
-    const existingInventory = await Inventory.findOne({ where: { label_number } });
-    if (existingInventory) {
-      const progress = getLabelProgress(item);
-
-      return res.render('administration/inventories/create', {
-        title: 'Input Label Inventaris - Sistem Inventaris Laboratorium',
-        selectedItem: item,
-        progress,
-        error: 'Nomor label sudah digunakan pada inventaris lain.',
-        formData: { label_number }
-      });
+    if (parsedQuantity < 1) {
+      return renderCreateForm('Jumlah unit minimal 1.', baseFormData);
     }
 
-    const qrImagePath = await generateQrDataUrl(req, label_number);
+    if (parsedQuantity > remaining) {
+      return renderCreateForm(`Jumlah unit melebihi sisa yang belum berlabel. Sisa saat ini: ${remaining} unit.`, baseFormData);
+    }
+
+    const draftYear = item.draft ? item.draft.year : new Date().getFullYear();
+    const labelNumbers = await generateLabelNumbers(draftYear, parsedQuantity);
     const latestReceivedDate = getLatestReceivedDate(item);
+    const createdLabels = [];
 
-    const inventory = await Inventory.create({
-      name: item.item_name,
-      category: item.item_type,
-      purchase_date: latestReceivedDate ? latestReceivedDate : new Date(),
-      price: item.price,
-      condition: normalizedCondition,
-      room_id: parsedRoomId,
-      procurement_item_id: item.id,
-      label_number,
-      qr_image_path: qrImagePath
-    });
+    const transaction = await sequelize.transaction();
+    try {
+      for (let i = 0; i < labelNumbers.length; i++) {
+        const label_number = labelNumbers[i];
+        const qrImagePath = await generateQrDataUrl(req, label_number);
 
-    if (item.replacement_inventory_id) {
-      await InventoryReplacement.create({
-        old_inventory_id: item.replacement_inventory_id,
-        new_inventory_id: inventory.id,
-        date: new Date(),
-        reason: `Penggantian dari pengadaan tahun ${item.draft ? item.draft.year : '-'}`
-      });
+        const inventory = await Inventory.create({
+          name: item.item_name,
+          category: itemCategory.name,
+          category_id: itemCategory.id,
+          purchase_date: latestReceivedDate ? latestReceivedDate : new Date(),
+          price: item.price,
+          condition: normalizedCondition,
+          room_id: parsedRoomId,
+          procurement_item_id: item.id,
+          label_number,
+          qr_image_path: qrImagePath
+        }, { transaction });
+
+        if (item.replacement_inventory_id && inventoryTotal === 0 && i === 0) {
+          await InventoryReplacement.create({
+            old_inventory_id: item.replacement_inventory_id,
+            new_inventory_id: inventory.id,
+            date: new Date(),
+            reason: `Penggantian dari pengadaan tahun ${item.draft ? item.draft.year : '-'}`
+          }, { transaction });
+        }
+
+        createdLabels.push(label_number);
+      }
+
+      await transaction.commit();
+    } catch (writeError) {
+      await transaction.rollback();
+      throw writeError;
     }
 
-    const unitNumber = inventoryTotal + 1;
-    const remainingAfter = receivedTotal - unitNumber;
+    const remainingAfter = remaining - parsedQuantity;
+    const labelRange = parsedQuantity === 1
+      ? createdLabels[0]
+      : `${createdLabels[0]} s/d ${createdLabels[createdLabels.length - 1]}`;
 
     if (remainingAfter > 0) {
-      req.session.success = `Label ${label_number} untuk unit ke-${unitNumber} berhasil disimpan. Sisa ${remainingAfter} unit lagi untuk "${item.item_name}".`;
+      req.session.success = `${parsedQuantity} label (${labelRange}) berhasil dibuat di ruangan "${room.name}". Sisa ${remainingAfter} unit lagi untuk "${item.item_name}".`;
       return res.redirect(`/administration/inventories/create?item=${item.id}`);
     }
 
-    req.session.success = `Label ${label_number} berhasil disimpan. Semua unit "${item.item_name}" sudah berlabel.`;
+    req.session.success = `${parsedQuantity} label (${labelRange}) berhasil dibuat di ruangan "${room.name}". Semua unit "${item.item_name}" sudah berlabel.`;
     return res.redirect('/administration/inventories');
   } catch (error) {
     next(error);
@@ -642,11 +670,13 @@ exports.getEditInventory = async (req, res, next) => {
     }
 
     const rooms = await Room.findAll({ order: [['name', 'ASC']] });
+    const categories = await ItemCategory.findAll({ order: [['name', 'ASC']] });
 
     return res.render('administration/inventories/edit', {
       title: 'Ubah Inventaris - Sistem Inventaris Laboratorium',
       inventory,
       rooms,
+      categories,
       error: null
     });
   } catch (error) {
@@ -655,7 +685,7 @@ exports.getEditInventory = async (req, res, next) => {
 };
 
 exports.postUpdateInventory = async (req, res, next) => {
-  const { label_number, condition, room_id } = req.body;
+  const { label_number, condition, room_id, category_id } = req.body;
 
   try {
     const inventory = await Inventory.findByPk(req.params.id, {
@@ -675,54 +705,54 @@ exports.postUpdateInventory = async (req, res, next) => {
 
     const normalizedCondition = condition || inventory.condition || 'Baik';
     const parsedRoomId = room_id ? parseInt(room_id, 10) : null;
+    const parsedCategoryId = category_id ? parseInt(category_id, 10) : null;
     const rooms = await Room.findAll({ order: [['name', 'ASC']] });
+    const categories = await ItemCategory.findAll({ order: [['name', 'ASC']] });
+
+    const renderEditForm = (error) => res.render('administration/inventories/edit', {
+      title: 'Ubah Inventaris - Sistem Inventaris Laboratorium',
+      inventory: {
+        ...inventory.toJSON(),
+        label_number,
+        condition: normalizedCondition,
+        room_id: room_id || '',
+        category_id: category_id || ''
+      },
+      rooms,
+      categories,
+      error
+    });
 
     if (!label_number) {
-      return res.render('administration/inventories/edit', {
-        title: 'Ubah Inventaris - Sistem Inventaris Laboratorium',
-        inventory: { ...inventory.toJSON(), label_number, condition: normalizedCondition, room_id: room_id || '' },
-        rooms,
-        error: 'Nomor label wajib diisi.'
-      });
+      return renderEditForm('Nomor label wajib diisi.');
+    }
+
+    if (!parsedCategoryId) {
+      return renderEditForm('Kategori barang wajib dipilih.');
     }
 
     if (!INVENTORY_CONDITIONS.has(normalizedCondition)) {
-      return res.render('administration/inventories/edit', {
-        title: 'Ubah Inventaris - Sistem Inventaris Laboratorium',
-        inventory: { ...inventory.toJSON(), label_number, condition: normalizedCondition, room_id: room_id || '' },
-        rooms,
-        error: 'Kondisi inventaris tidak valid.'
-      });
+      return renderEditForm('Kondisi inventaris tidak valid.');
     }
 
     if (!parsedRoomId) {
-      return res.render('administration/inventories/edit', {
-        title: 'Ubah Inventaris - Sistem Inventaris Laboratorium',
-        inventory: { ...inventory.toJSON(), label_number, condition: normalizedCondition, room_id: room_id || '' },
-        rooms,
-        error: 'Ruangan wajib dipilih.'
-      });
+      return renderEditForm('Ruangan wajib dipilih.');
     }
 
     const room = await Room.findByPk(parsedRoomId);
     if (!room) {
-      return res.render('administration/inventories/edit', {
-        title: 'Ubah Inventaris - Sistem Inventaris Laboratorium',
-        inventory: { ...inventory.toJSON(), label_number, condition: normalizedCondition, room_id: room_id || '' },
-        rooms,
-        error: 'Ruangan tidak ditemukan.'
-      });
+      return renderEditForm('Ruangan tidak ditemukan.');
+    }
+
+    const itemCategory = await ItemCategory.findByPk(parsedCategoryId);
+    if (!itemCategory) {
+      return renderEditForm('Kategori barang tidak ditemukan.');
     }
 
     if (label_number !== inventory.label_number) {
       const existingInventory = await Inventory.findOne({ where: { label_number } });
       if (existingInventory) {
-        return res.render('administration/inventories/edit', {
-          title: 'Ubah Inventaris - Sistem Inventaris Laboratorium',
-          inventory: { ...inventory.toJSON(), label_number, condition: normalizedCondition, room_id: room_id || '' },
-          rooms,
-          error: 'Nomor label sudah digunakan pada inventaris lain.'
-        });
+        return renderEditForm('Nomor label sudah digunakan pada inventaris lain.');
       }
     }
 
@@ -732,7 +762,9 @@ exports.postUpdateInventory = async (req, res, next) => {
       label_number,
       qr_image_path: qrImagePath,
       condition: normalizedCondition,
-      room_id: parsedRoomId
+      room_id: parsedRoomId,
+      category_id: itemCategory.id,
+      category: itemCategory.name
     });
 
     req.session.success = 'Nomor label dan QR code berhasil diperbarui.';
@@ -772,6 +804,8 @@ exports.getInventoryByLabel = async (req, res, next) => {
     const inventory = await Inventory.findOne({
       where: { label_number: req.params.label },
       include: [
+        { model: Room, as: 'room' },
+        { model: ItemCategory, as: 'itemCategory' },
         {
           model: ProcurementItem,
           as: 'procurementItem',

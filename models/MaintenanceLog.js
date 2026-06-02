@@ -42,6 +42,10 @@ const MaintenanceLog = sequelize.define('MaintenanceLog', {
   bhp_quantity_used: {
     type: DataTypes.INTEGER,
     allowNull: true
+  },
+  condition_after: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 }, {
   tableName: 'maintenance_logs'

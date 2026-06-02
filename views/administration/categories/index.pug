@@ -1,0 +1,71 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Kategori Barang
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Kategori Barang
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if success
+    .alert.alert-success.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-check-circle.me-2
+      strong Sukses!
+      = success
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error!
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-12
+      .card.w-100
+        .card-body
+          .d-flex.align-items-center.justify-content-between.mb-4
+            div
+              h5.card-title.fw-semibold.mb-0 Daftar Kategori Barang
+              p.card-subtitle.mb-0 Kelola kategori untuk pengelompokan inventaris laboratorium.
+            a.btn.btn-primary.d-flex.align-items-center.gap-2(href="/administration/categories/create")
+              i.ti.ti-plus.fs-5
+              | Tambah Kategori
+
+          .table-responsive.mt-4
+            table.table.align-middle.text-nowrap.mb-0
+              thead.text-dark.fs-4
+                tr
+                  th.border-bottom-0.fw-semibold No
+                  th.border-bottom-0.fw-semibold Nama Kategori
+                  th.border-bottom-0.fw-semibold Deskripsi
+                  th.border-bottom-0.fw-semibold.text-center Aksi
+              tbody
+                if categories && categories.length > 0
+                  each category, index in categories
+                    tr
+                      td.border-bottom-0= index + 1
+                      td.border-bottom-0
+                        h6.fw-semibold.mb-0= category.name
+                      td.border-bottom-0
+                        p.mb-0.text-wrap(style="max-width: 350px;")= category.description || '-'
+                      td.border-bottom-0.text-center
+                        .d-flex.justify-content-center.gap-2
+                          a.btn.btn-sm.btn-outline-warning(href=`/administration/categories/${category.id}/edit`)
+                            i.ti.ti-edit
+                          form(action=`/administration/categories/${category.id}/delete` method="POST" onsubmit="return confirm('Hapus kategori ini?')")
+                            button.btn.btn-sm.btn-outline-danger(type="submit")
+                              i.ti.ti-trash
+                else
+                  tr
+                    td.text-center.py-4(colspan="4") Belum ada kategori barang. Tambahkan kategori terlebih dahulu.

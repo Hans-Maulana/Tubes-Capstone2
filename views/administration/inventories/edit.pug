@@ -41,6 +41,12 @@ block content
           form(action=`/administration/inventories/${inventory.id}/edit` method="POST" onsubmit="return confirm('Simpan perubahan dan regenerate QR code?')")
             .row
               .col-md-6.mb-3
+                label.form-label Kategori Barang
+                select.form-select(name="category_id" required)
+                  option(value="" disabled selected=(!inventory.category_id)) -- Pilih Kategori --
+                  each cat in (categories || [])
+                    option(value=cat.id selected=(String(inventory.category_id) === String(cat.id)))= cat.name
+              .col-md-6.mb-3
                 label.form-label Kondisi
                 select.form-select(name="condition" required)
                   - const selectedCondition = (inventory.condition || 'Baik')

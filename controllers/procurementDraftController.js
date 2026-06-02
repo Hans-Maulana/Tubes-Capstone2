@@ -8,6 +8,13 @@ function isLocked(draft) {
   return draft && ['Locked', 'Approved', 'Rejected'].includes(draft.status);
 }
 
+function resolveItemUnit(itemType, unit) {
+  if (itemType === 'BHP') {
+    return unit && unit.trim() ? unit.trim() : 'pcs';
+  }
+  return null;
+}
+
 async function findOwnedDraft(id, userId) {
   return ProcurementDraft.findOne({
     where: { id, lab_head_id: userId },
@@ -123,7 +130,7 @@ exports.getDraftDetail = async (req, res, next) => {
 };
 
 exports.postCreateItem = async (req, res, next) => {
-  const { item_type, item_name, quantity, price, purchase_link, replacement_inventory_id } = req.body;
+  const { item_type, item_name, quantity, price, purchase_link, replacement_inventory_id, unit } = req.body;
 
   try {
     const draft = await findOwnedDraft(req.params.id, req.session.user.id);
@@ -146,6 +153,7 @@ exports.postCreateItem = async (req, res, next) => {
       draft_id: draft.id,
       item_type,
       item_name,
+      unit: resolveItemUnit(item_type, unit),
       quantity: parseInt(quantity, 10),
       price: parseInt(price, 10),
       purchase_link: purchase_link || null,
@@ -200,7 +208,7 @@ exports.getEditItem = async (req, res, next) => {
 };
 
 exports.postUpdateItem = async (req, res, next) => {
-  const { item_type, item_name, quantity, price, purchase_link, replacement_inventory_id } = req.body;
+  const { item_type, item_name, quantity, price, purchase_link, replacement_inventory_id, unit } = req.body;
 
   try {
     const draft = await findOwnedDraft(req.params.id, req.session.user.id);
@@ -239,7 +247,8 @@ exports.postUpdateItem = async (req, res, next) => {
           quantity,
           price,
           purchase_link,
-          replacement_inventory_id
+          replacement_inventory_id,
+          unit
         },
         damagedInventories,
         error: 'Jenis, nama barang, jumlah, dan harga wajib diisi.'
@@ -249,6 +258,7 @@ exports.postUpdateItem = async (req, res, next) => {
     await item.update({
       item_type,
       item_name,
+      unit: resolveItemUnit(item_type, unit),
       quantity: parseInt(quantity, 10),
       price: parseInt(price, 10),
       purchase_link: purchase_link || null,

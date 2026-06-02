@@ -191,9 +191,15 @@ block content
               a.btn.btn-outline-primary.d-flex.align-items-center.gap-2.py-3.px-4(href="/stafflab/bhps")
                 i.ti.ti-archive.fs-5
                 | Kelola Stok BHP
-              a.btn.btn-outline-success.d-flex.align-items-center.gap-2.py-3.px-4(href="/stafflab/maintenance/create")
-                i.ti.ti-tool.fs-5
-                | Catat Log Maintenance
+              a.btn.btn-outline-success.d-flex.align-items-center.gap-2.py-3.px-4(href="/stafflab/inventories")
+                i.ti.ti-packages.fs-5
+                | Kelola Inventaris
+              a.btn.btn-outline-info.d-flex.align-items-center.gap-2.py-3.px-4(href="/stafflab/inventories/scan")
+                i.ti.ti-scan.fs-5
+                | Scan QR Inventaris
+              a.btn.btn-outline-secondary.d-flex.align-items-center.gap-2.py-3.px-4(href="/stafflab/maintenance")
+                i.ti.ti-history.fs-5
+                | Log Maintenance
 
             if lowStockBhps && lowStockBhps.length > 0
               h6.fw-semibold.mt-4.mb-2.text-danger.d-flex.align-items-center.gap-1

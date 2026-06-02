@@ -1,0 +1,107 @@
+extends ../../layouts/master.pug
+
+block content
+  .row
+    .col-12
+      .card.bg-light-primary.shadow-none.position-relative.overflow-hidden.mb-4
+        .card-body.px-4.py-3
+          .row.align-items-center
+            .col-9
+              h4.fw-semibold.mb-8 Selesaikan Maintenance
+              nav(aria-label="breadcrumb")
+                ol.breadcrumb.mb-0
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/dashboard") Dashboard
+                  li.breadcrumb-item
+                    a.text-muted.text-decoration-none(href="/stafflab/inventories") Kelola Inventaris
+                  li.breadcrumb-item.text-muted.active(aria-current="page") Selesaikan Maintenance
+            .col-3
+              .text-center.mb-n5
+                img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
+
+  if error
+    .alert.alert-danger.alert-dismissible.fade.show(role="alert")
+      i.fa.fa-exclamation-circle.me-2
+      strong Error!
+      = error
+      button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
+
+  .row
+    .col-lg-8
+      .card
+        .card-body
+          h5.card-title.fw-semibold.mb-3 Form Selesai Maintenance
+          p.card-subtitle.mb-4 Isi detail perbaikan. Data akan disimpan ke log maintenance setelah disimpan.
+
+          .alert.alert-warning.border-0.mb-4
+            i.ti.ti-tool.me-1
+            strong= inventory.label_number
+            |  — #{inventory.name}
+            span.badge.bg-warning.ms-2 Sedang Maintenance
+
+          form(action=`/stafflab/inventories/${inventory.id}/complete-maintenance` method="POST" onsubmit="return confirm('Simpan log maintenance dan ubah kondisi inventaris?')")
+            .row
+              .col-md-6.mb-3
+                label.form-label Kondisi Setelah Maintenance
+                select.form-select(name="condition" required)
+                  each cond in (conditions || [])
+                    option(value=cond selected=(formData.condition === cond))= cond
+              .col-md-6.mb-3
+                label.form-label Tanggal Selesai
+                input.form-control(type="date" name="date" value=formData.date required)
+            .mb-3
+              label.form-label Deskripsi / Tindakan Maintenance
+              textarea.form-control(name="description" rows="4" placeholder="Jelaskan perbaikan yang dilakukan..." required)= formData.description || ''
+
+            hr.my-4
+            h6.fw-semibold.mb-3 Penggunaan BHP (Opsional)
+            .row
+              .col-md-6.mb-3
+                label.form-label Pilih BHP
+                select.form-select(name="bhp_used_id")
+                  option(value="" selected=(!formData.bhp_used_id)) -- Tidak Menggunakan BHP --
+                  each bhp in (bhps || [])
+                    option(value=bhp.id selected=(String(formData.bhp_used_id) === String(bhp.id)) data-stock=bhp.stock data-unit=bhp.unit)
+                      = `${bhp.name} (Tersedia: ${bhp.stock} ${bhp.unit})`
+                small#bhp-stock-help.text-primary.fw-semibold.mt-1.d-block
+              .col-md-6.mb-3
+                label.form-label Jumlah BHP Digunakan
+                input.form-control(type="number" name="bhp_quantity_used" min="1" value=formData.bhp_quantity_used placeholder="Jumlah")
+
+            .d-flex.gap-2.mt-2
+              button.btn.btn-success(type="submit")
+                i.ti.ti-circle-check.me-1
+                | Simpan Log & Selesaikan
+              a.btn.btn-outline-secondary(href="/stafflab/inventories") Batal
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function () {
+      const bhpSelect = document.querySelector('select[name="bhp_used_id"]');
+      const qtyInput = document.querySelector('input[name="bhp_quantity_used"]');
+      const stockHelp = document.getElementById('bhp-stock-help');
+
+      function updateBhpFields() {
+        if (!bhpSelect || !qtyInput) return;
+        const selectedOption = bhpSelect.options[bhpSelect.selectedIndex];
+        const stock = selectedOption.getAttribute('data-stock');
+        const unit = selectedOption.getAttribute('data-unit');
+
+        if (stock !== null && bhpSelect.value !== '') {
+          stockHelp.textContent = `Stok tersedia: ${stock} ${unit}`;
+          qtyInput.removeAttribute('disabled');
+          qtyInput.setAttribute('required', 'required');
+          qtyInput.setAttribute('max', stock);
+        } else {
+          stockHelp.textContent = '';
+          qtyInput.setAttribute('disabled', 'disabled');
+          qtyInput.removeAttribute('required');
+          qtyInput.value = '';
+        }
+      }
+
+      if (bhpSelect) {
+        bhpSelect.addEventListener('change', updateBhpFields);
+        updateBhpFields();
+      }
+    });
