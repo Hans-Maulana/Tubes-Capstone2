@@ -38,7 +38,7 @@ block content
             div
               h5.card-title.fw-semibold.mb-0 Inventaris Laboratorium
               p.card-subtitle.mb-0 Mulai maintenance, ubah status, atau pindah ruangan. Scan QR untuk menampilkan 1 barang.
-            .d-flex.gap-2
+            .d-flex.gap-2.flex-wrap
               a.btn.btn-outline-primary.d-flex.align-items-center.gap-2(href="/stafflab/inventories/scan")
                 i.ti.ti-scan.fs-5
                 | Scan QR
@@ -82,37 +82,37 @@ block content
                 |  nama barang mengandung "#{selectedQ}"
 
           .table-responsive.mt-4
-            table.table.align-middle.text-nowrap.mb-0
-              thead.text-dark.fs-4
+            table.table.table-hover.align-middle.mb-0
+              thead.table-light
                 tr
-                  th.border-bottom-0.fw-semibold No
-                  th.border-bottom-0.fw-semibold Nomor Label
-                  th.border-bottom-0.fw-semibold Nama Barang
-                  th.border-bottom-0.fw-semibold Kategori
-                  th.border-bottom-0.fw-semibold Ruangan
-                  th.border-bottom-0.fw-semibold Kondisi
-                  th.border-bottom-0.fw-semibold.text-center Aksi
+                  th.fw-semibold No
+                  th.fw-semibold Nomor Label
+                  th.fw-semibold Nama Barang
+                  th.fw-semibold Kategori
+                  th.fw-semibold Ruangan
+                  th.fw-semibold Kondisi
+                  th.fw-semibold.text-center Aksi
               tbody
                 if inventories && inventories.length > 0
                   each inv, index in inventories
                     tr
-                      td.border-bottom-0= index + 1
-                      td.border-bottom-0
+                      td= index + 1
+                      td
                         h6.fw-semibold.mb-0= inv.label_number || '-'
-                      td.border-bottom-0= inv.name || (inv.procurementItem ? inv.procurementItem.item_name : '-')
-                      td.border-bottom-0
-                        span.badge.bg-light-primary.text-primary.fw-semibold= inv.itemCategory ? inv.itemCategory.name : (inv.category || '-')
-                      td.border-bottom-0
-                        span.badge.bg-light-secondary.text-secondary.fw-semibold= inv.room ? inv.room.name : '-'
-                      td.border-bottom-0
+                      td= inv.name || (inv.procurementItem ? inv.procurementItem.item_name : '-')
+                      td
+                        span.badge.bg-light-primary.text-primary= inv.itemCategory ? inv.itemCategory.name : (inv.category || '-')
+                      td
+                        span.badge.bg-light-secondary.text-secondary= inv.room ? inv.room.name : '-'
+                      td
                         if inv.condition === 'Baik'
                           span.badge.bg-success.rounded-3.fw-semibold Baik
                         else if inv.condition === 'Maintenance'
                           span.badge.bg-warning.rounded-3.fw-semibold Maintenance
                         else
                           span.badge.bg-danger.rounded-3.fw-semibold Rusak
-                      td.border-bottom-0.text-center
-                        .d-flex.justify-content-center.gap-1.flex-wrap
+                      td.text-center
+                        .d-flex.justify-content-center.gap-1.flex-nowrap
                           a.btn.btn-sm.btn-outline-secondary(href=`/stafflab/inventories/${inv.id}/change-status` title="Ubah Status")
                             i.ti.ti-refresh
                             span.d-none.d-md-inline.ms-1 Status

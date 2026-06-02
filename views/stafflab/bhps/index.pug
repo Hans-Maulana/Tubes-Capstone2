@@ -7,7 +7,7 @@ block content
         .card-body.px-4.py-3
           .row.align-items-center
             .col-9
-              h4.fw-semibold.mb-8 Kelola Stok Bahan Habis Pakai (BHP)
+              h4.fw-semibold.mb-8 Stok Bahan Habis Pakai (BHP)
               nav(aria-label="breadcrumb")
                 ol.breadcrumb.mb-0
                   li.breadcrumb-item
@@ -17,17 +17,16 @@ block content
               .text-center.mb-n5
                 img.img-fluid.mb-n4(src="/assets/images/backgrounds/welcome-bg.svg" alt="" style="max-height: 120px;")
 
-  //- Success & Error Alerts
   if success
     .alert.alert-success.alert-dismissible.fade.show(role="alert")
       i.fa.fa-check-circle.me-2
-      strong Sukses! 
+      strong Sukses!
       = success
       button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
   if error
     .alert.alert-danger.alert-dismissible.fade.show(role="alert")
       i.fa.fa-exclamation-circle.me-2
-      strong Error! 
+      strong Error!
       = error
       button.btn-close(type="button" data-bs-dismiss="alert" aria-label="Close")
 
@@ -35,49 +34,35 @@ block content
     .col-12
       .card.w-100
         .card-body
-          .d-flex.align-items-center.justify-content-between.mb-4
+          .d-flex.align-items-center.justify-content-between.mb-3.flex-wrap.gap-2
             div
-              h5.card-title.fw-semibold.mb-0 Daftar Bahan Habis Pakai
-              p.card-subtitle.mb-0 Mengelola persediaan barang yang habis dipakai untuk keperluan laboratorium.
-            a.btn.btn-primary.d-flex.align-items-center.gap-2(href="/stafflab/bhps/create")
-              i.ti.ti-plus.fs-5
-              | Tambah BHP Baru
-
-          .table-responsive.mt-4
-            table.table.align-middle.text-nowrap.mb-0
-              thead.text-dark.fs-4
+              h5.card-title.fw-semibold.mb-0 Daftar Stok BHP
+          .table-responsive
+            table.table.table-hover.align-middle.mb-0
+              thead.table-light
                 tr
-                  th.border-bottom-0.fw-semibold No
-                  th.border-bottom-0.fw-semibold Nama BHP
-                  th.border-bottom-0.fw-semibold Satuan
-                  th.border-bottom-0.fw-semibold Stok Tersedia
-                  th.border-bottom-0.fw-semibold.text-center Aksi
+                  th.fw-semibold No
+                  th.fw-semibold Nama BHP
+                  th.fw-semibold Satuan
+                  th.fw-semibold Stok Tersedia
               tbody
                 if bhps && bhps.length > 0
                   each bhp, index in bhps
                     tr
-                      td.border-bottom-0
-                        h6.fw-normal.mb-0= index + 1
-                      td.border-bottom-0
-                        h6.fw-semibold.mb-0= bhp.name
-                      td.border-bottom-0
-                        span.badge.bg-light-secondary.text-secondary.fw-semibold= bhp.unit
-                      td.border-bottom-0
+                      td= index + 1
+                      td.fw-semibold= bhp.name
+                      td
+                        span.badge.bg-light-secondary.text-secondary= bhp.unit
+                      td
                         if bhp.stock < 5
-                          span.badge.bg-light-danger.text-danger.fw-semibold= `${bhp.stock} (Kritis)`
+                          span.badge.bg-light-danger.text-danger= `${bhp.stock} (Kritis)`
                         else if bhp.stock < 20
-                          span.badge.bg-light-warning.text-warning.fw-semibold= bhp.stock
+                          span.badge.bg-light-warning.text-warning= bhp.stock
                         else
-                          span.badge.bg-light-success.text-success.fw-semibold= bhp.stock
-                      td.border-bottom-0.text-center
-                        .d-flex.justify-content-center.gap-2
-                          a.btn.btn-sm.btn-outline-warning.d-flex.align-items-center.gap-1(href=`/stafflab/bhps/${bhp.id}/edit`)
-                            i.ti.ti-edit
-                            | Ubah
-                          form(action=`/stafflab/bhps/${bhp.id}/delete` method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus BHP ini?')")
-                            button.btn.btn-sm.btn-outline-danger.d-flex.align-items-center.gap-1(type="submit")
-                              i.ti.ti-trash
-                              | Hapus
+                          span.badge.bg-light-success.text-success= bhp.stock
                 else
                   tr
-                    td.text-center.py-4(colspan="5") Belum ada data Bahan Habis Pakai.
+                    td.text-center.py-4.text-muted(colspan="4")
+                      | Belum ada data BHP.
+                      br
+                      small Item BHP akan muncul setelah ada penerimaan barang dari pengadaan.

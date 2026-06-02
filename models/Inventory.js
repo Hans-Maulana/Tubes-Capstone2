@@ -75,3 +75,8 @@ Inventory.belongsTo(Room, { foreignKey: 'room_id', as: 'room' });
 Room.hasMany(Inventory, { foreignKey: 'room_id', as: 'inventories' });
 Inventory.belongsTo(ItemCategory, { foreignKey: 'category_id', as: 'itemCategory' });
 ItemCategory.hasMany(Inventory, { foreignKey: 'category_id', as: 'inventories' });
+
+const InventoryReplacement = require('./InventoryReplacement');
+
+Inventory.hasOne(InventoryReplacement, { foreignKey: 'new_inventory_id', as: 'replacementAsNew' });
+Inventory.hasOne(InventoryReplacement, { foreignKey: 'old_inventory_id', as: 'replacementAsOld' });

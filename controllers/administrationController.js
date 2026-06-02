@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const { ProcurementDraft, ProcurementItem, ProcurementReceipt, Inventory, InventoryReplacement, User, Bhp, Room, ItemCategory, ProcurementItemReplacement, sequelize } = require('../models');
 const QRCode = require('qrcode');
 const { generateNextLabelNumber, generateLabelNumbers } = require('../utils/inventoryLabel');
+const { getInventoryReplacementIncludes } = require('../utils/inventoryReplacementInclude');
 
 const INVENTORY_CONDITIONS = new Set(['Baik', 'Rusak', 'Maintenance']);
 
@@ -969,6 +970,7 @@ exports.getInventoryByLabel = async (req, res, next) => {
       include: [
         { model: Room, as: 'room' },
         { model: ItemCategory, as: 'itemCategory' },
+        ...getInventoryReplacementIncludes(),
         {
           model: ProcurementItem,
           as: 'procurementItem',

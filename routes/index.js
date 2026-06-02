@@ -84,11 +84,6 @@ router.post('/administration/categories/:id/delete', authCheck, adminStaffCheck,
 
 // --- Staff Laboratorium Routes ---
 router.get('/stafflab/bhps', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getBhps);
-router.get('/stafflab/bhps/create', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getCreateBhp);
-router.post('/stafflab/bhps', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postCreateBhp);
-router.get('/stafflab/bhps/:id/edit', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getEditBhp);
-router.post('/stafflab/bhps/:id/edit', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postUpdateBhp);
-router.post('/stafflab/bhps/:id/delete', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postDeleteBhp);
 
 router.get('/stafflab/maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getMaintenanceLogs);
 router.get('/stafflab/maintenance/create', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getCreateMaintenanceLog);

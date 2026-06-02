@@ -1,5 +1,15 @@
 const { Op } = require('sequelize');
-const { Bhp, Inventory, MaintenanceLog, User, Room, ProcurementItem, ProcurementDraft, ItemCategory, sequelize } = require('../models');
+const {
+  Bhp,
+  Inventory,
+  MaintenanceLog,
+  User,
+  Room,
+  ProcurementItem,
+  ProcurementDraft,
+  ItemCategory,
+  sequelize
+} = require('../models');
 
 const INVENTORY_CONDITIONS = ['Baik', 'Rusak', 'Maintenance'];
 
@@ -59,7 +69,7 @@ exports.getBhps = async (req, res, next) => {
     });
 
     res.render('stafflab/bhps/index', {
-      title: 'Kelola Stok BHP - Sistem Inventaris Laboratorium',
+      title: 'Stok BHP - Sistem Inventaris Laboratorium',
       bhps,
       success: req.session.success || null,
       error: req.session.error || null
@@ -67,147 +77,6 @@ exports.getBhps = async (req, res, next) => {
 
     req.session.success = null;
     req.session.error = null;
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.getCreateBhp = async (req, res, next) => {
-  res.render('stafflab/bhps/create', {
-    title: 'Tambah BHP - Sistem Inventaris Laboratorium',
-    error: null,
-    formData: {}
-  });
-};
-
-exports.postCreateBhp = async (req, res, next) => {
-  const { name, unit, stock } = req.body;
-  const parsedStock = parseInt(stock, 10);
-
-  try {
-    if (!name || !unit || isNaN(parsedStock) || parsedStock < 0) {
-      return res.render('stafflab/bhps/create', {
-        title: 'Tambah BHP - Sistem Inventaris Laboratorium',
-        error: 'Semua bidang wajib diisi dengan benar. Stok tidak boleh kurang dari 0.',
-        formData: { name, unit, stock }
-      });
-    }
-
-    // Check duplicate name
-    const existing = await Bhp.findOne({
-      where: {
-        name: { [Op.like]: name.trim() }
-      }
-    });
-
-    if (existing) {
-      return res.render('stafflab/bhps/create', {
-        title: 'Tambah BHP - Sistem Inventaris Laboratorium',
-        error: 'Bahan Habis Pakai (BHP) dengan nama tersebut sudah terdaftar.',
-        formData: { name, unit, stock }
-      });
-    }
-
-    await Bhp.create({
-      name: name.trim(),
-      unit: unit.trim(),
-      stock: parsedStock
-    });
-
-    req.session.success = `BHP "${name}" berhasil ditambahkan dengan stok ${parsedStock}.`;
-    return res.redirect('/stafflab/bhps');
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.getEditBhp = async (req, res, next) => {
-  try {
-    const bhp = await Bhp.findByPk(req.params.id);
-    if (!bhp) {
-      req.session.error = 'Data BHP tidak ditemukan.';
-      return res.redirect('/stafflab/bhps');
-    }
-
-    res.render('stafflab/bhps/edit', {
-      title: 'Ubah BHP - Sistem Inventaris Laboratorium',
-      bhp,
-      error: null
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.postUpdateBhp = async (req, res, next) => {
-  const { name, unit, stock } = req.body;
-  const parsedStock = parseInt(stock, 10);
-
-  try {
-    const bhp = await Bhp.findByPk(req.params.id);
-    if (!bhp) {
-      req.session.error = 'Data BHP tidak ditemukan.';
-      return res.redirect('/stafflab/bhps');
-    }
-
-    if (!name || !unit || isNaN(parsedStock) || parsedStock < 0) {
-      return res.render('stafflab/bhps/edit', {
-        title: 'Ubah BHP - Sistem Inventaris Laboratorium',
-        bhp: { id: bhp.id, name, unit, stock },
-        error: 'Semua bidang wajib diisi dengan benar. Stok tidak boleh kurang dari 0.'
-      });
-    }
-
-    // Check duplicate name for other BHPs
-    const existing = await Bhp.findOne({
-      where: {
-        name: { [Op.like]: name.trim() },
-        id: { [Op.ne]: bhp.id }
-      }
-    });
-
-    if (existing) {
-      return res.render('stafflab/bhps/edit', {
-        title: 'Ubah BHP - Sistem Inventaris Laboratorium',
-        bhp: { id: bhp.id, name, unit, stock },
-        error: 'Bahan Habis Pakai (BHP) dengan nama tersebut sudah terdaftar.'
-      });
-    }
-
-    await bhp.update({
-      name: name.trim(),
-      unit: unit.trim(),
-      stock: parsedStock
-    });
-
-    req.session.success = `BHP "${name}" berhasil diperbarui.`;
-    return res.redirect('/stafflab/bhps');
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.postDeleteBhp = async (req, res, next) => {
-  try {
-    const bhp = await Bhp.findByPk(req.params.id);
-    if (!bhp) {
-      req.session.error = 'Data BHP tidak ditemukan.';
-      return res.redirect('/stafflab/bhps');
-    }
-
-    // Check if used in maintenance logs
-    const usageCount = await MaintenanceLog.count({
-      where: { bhp_used_id: bhp.id }
-    });
-
-    if (usageCount > 0) {
-      req.session.error = `BHP "${bhp.name}" tidak dapat dihapus karena telah digunakan pada ${usageCount} log maintenance.`;
-      return res.redirect('/stafflab/bhps');
-    }
-
-    await bhp.destroy();
-    req.session.success = `BHP "${bhp.name}" berhasil dihapus.`;
-    return res.redirect('/stafflab/bhps');
   } catch (error) {
     next(error);
   }

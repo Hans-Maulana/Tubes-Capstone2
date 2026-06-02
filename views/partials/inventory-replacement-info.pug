@@ -1,0 +1,22 @@
+if inventory && inventory.replacementAsNew && inventory.replacementAsNew.oldInventory
+  - const oldInv = inventory.replacementAsNew.oldInventory
+  p.small.mb-1.text-warning
+    i.ti.ti-replace.me-1
+    | Mengganti:
+    strong.ms-1= oldInv.label_number || '-'
+    |  — #{oldInv.name || '-'}
+    if oldInv.room
+      span.text-muted  (#{oldInv.room.name})
+    if oldInv.condition
+      span.badge.bg-light-secondary.text-secondary.ms-1= oldInv.condition
+if inventory && inventory.replacementAsOld && inventory.replacementAsOld.newInventory
+  - const newInv = inventory.replacementAsOld.newInventory
+  p.small.mb-0.text-success
+    i.ti.ti-arrow-right.me-1
+    | Diganti oleh:
+    strong.ms-1= newInv.label_number || '-'
+    |  — #{newInv.name || '-'}
+    if newInv.room
+      span.text-muted  (#{newInv.room.name})
+    if newInv.condition
+      span.badge.bg-light-success.text-success.ms-1= newInv.condition

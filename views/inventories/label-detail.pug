@@ -45,6 +45,18 @@ html(lang="id")
                     p.text-muted.mb-1 Harga
                     h6.fw-semibold.mb-0= `Rp ${Number(inventory.price || 0).toLocaleString('id-ID')}`
 
+                if inventory.replacementAsNew || inventory.replacementAsOld
+                  .col-12.mb-3
+                    .p-3.rounded.border.bg-light
+                      h6.fw-semibold.mb-2
+                        i.ti.ti-replace.me-1
+                        | Riwayat Penggantian
+                      include ../partials/inventory-replacement-info
+                      if inventory.replacementAsNew && inventory.replacementAsNew.reason
+                        p.small.text-muted.mb-0.mt-2
+                          strong Alasan:
+                          |  #{inventory.replacementAsNew.reason}
+
                 if inventory.procurementItem
                   hr
                   h6.fw-semibold.mb-3 Sumber Pengadaan
