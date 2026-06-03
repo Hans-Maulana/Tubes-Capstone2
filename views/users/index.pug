@@ -84,7 +84,7 @@ block content
                             | Ubah
                           
                           if !user || user.id !== userItem.id
-                            form(action=`/users/delete/${userItem.id}` method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus pengguna ini? Tindakan ini tidak dapat dibatalkan.')")
+                            form(action=`/users/delete/${userItem.id}` method="POST" data-confirm-message="Apakah Anda yakin ingin menghapus pengguna ini? Tindakan ini tidak dapat dibatalkan.")
                               button.btn.btn-sm.btn-outline-danger.d-flex.align-items-center.gap-1(type="submit")
                                 i.ti.ti-trash
                                 | Hapus

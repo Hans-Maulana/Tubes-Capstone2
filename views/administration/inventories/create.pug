@@ -227,7 +227,9 @@ block scripts
         updateRoomMismatchHint();
 
         if (inventoryForm && quantityInput) {
-          inventoryForm.addEventListener('submit', function (e) {
+          inventoryForm.addEventListener('submit', async function (e) {
+            if (inventoryForm.dataset.uiInventorySubmitting === '1') return;
+
             const qty = parseInt(quantityInput.value, 10) || 1;
             const roomName = roomSelect && roomSelect.selectedIndex > 0
               ? roomSelect.options[roomSelect.selectedIndex].text
@@ -245,9 +247,17 @@ block scripts
               }
             }
 
-            if (!confirm(message)) {
-              e.preventDefault();
-            }
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            const confirmed = window.uiConfirm
+              ? await window.uiConfirm(message, { title: 'Konfirmasi Label Inventaris', confirmText: 'Simpan Label' })
+              : true;
+
+            if (!confirmed) return;
+
+            inventoryForm.dataset.uiInventorySubmitting = '1';
+            HTMLFormElement.prototype.submit.call(inventoryForm);
           });
         }
       });

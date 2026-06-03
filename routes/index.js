@@ -13,6 +13,7 @@ const roleCheck = require('../middlewares/roleCheck');
 const staffLabController = require('../controllers/staffLabController');
 const inventoryController = require('../controllers/inventoryController');
 const categoryController = require('../controllers/categoryController');
+const reportController = require('../controllers/reportController');
 
 // Define main/landing route
 // router.get('/', homeController.getHome);
@@ -21,7 +22,12 @@ router.get('/inventory-label/:label', administrationController.getInventoryByLab
 
 // Secure Dashboard Route protected by authCheck middleware
 router.get('/', authCheck, dashboardController.getDashboard);
+router.get('/dashboard/stats', authCheck, dashboardController.getDashboardStats);
 router.get('/dashboard', authCheck, dashboardController.getDashboard);
+
+router.get('/reports/lab-head/pdf', authCheck, roleCheck('Kepala Laboratorium'), reportController.getLabHeadReportPdf);
+router.get('/reports/kaprodi/pdf', authCheck, roleCheck('Ketua Program Studi'), reportController.getKaprodiReportPdf);
+router.get('/reports/admin-staff/pdf', authCheck, adminStaffCheck, reportController.getAdminStaffReportPdf);
 router.get('/inventories', authCheck, inventoryController.getInventories);
 
 // --- User Management Routes (Administrator Only) ---

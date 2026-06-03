@@ -75,7 +75,7 @@ block content
                             a.btn.btn-sm.btn-outline-warning.d-flex.align-items-center.gap-1(href=`/rooms/edit/${room.id}`)
                               i.ti.ti-edit
                               | Ubah
-                            form(action=`/rooms/delete/${room.id}` method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus ruangan ini? Inventaris yang terikat di ruangan ini mungkin akan kehilangan referensi.')")
+                            form(action=`/rooms/delete/${room.id}` method="POST" data-confirm-message="Apakah Anda yakin ingin menghapus ruangan ini? Inventaris yang terikat di ruangan ini mungkin akan kehilangan referensi.")
                               button.btn.btn-sm.btn-outline-danger.d-flex.align-items-center.gap-1(type="submit")
                                 i.ti.ti-trash
                                 | Hapus

@@ -39,7 +39,7 @@ block content
             |  — #{inventory.name}
             span.badge.bg-warning.ms-2 Sedang Maintenance
 
-          form(action=`/stafflab/inventories/${inventory.id}/complete-maintenance` method="POST" onsubmit="return confirm('Simpan log maintenance dan ubah kondisi inventaris?')")
+          form(action=`/stafflab/inventories/${inventory.id}/complete-maintenance` method="POST" data-confirm-message="Simpan log maintenance dan ubah kondisi inventaris?")
             .row
               .col-md-6.mb-3
                 label.form-label Kondisi Setelah Maintenance

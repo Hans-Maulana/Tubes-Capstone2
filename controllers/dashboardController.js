@@ -18,6 +18,107 @@ function getLabeledTotal(item) {
   return item.receivedInventories ? item.receivedInventories.length : 0;
 }
 
+async function getDashboardStatsForUser(user) {
+  if (user.role === 'Administrator') {
+    return {
+      totalUsers: await User.count(),
+      totalRooms: await Room.count(),
+      totalInventories: await Inventory.count(),
+      totalBhps: await Bhp.count()
+    };
+  }
+
+  if (user.role === 'Kepala Laboratorium') {
+    const { Op } = require('sequelize');
+    return {
+      totalDrafts: await ProcurementDraft.count({
+        where: { lab_head_id: user.id }
+      }),
+      submittedDrafts: await ProcurementDraft.count({
+        where: {
+          lab_head_id: user.id,
+          status: { [Op.ne]: 'Draft' }
+        }
+      }),
+      totalInventories: await Inventory.count(),
+      totalBhps: await Bhp.count()
+    };
+  }
+
+  if (user.role === 'Ketua Program Studi') {
+    const { Op } = require('sequelize');
+    return {
+      pendingDrafts: await ProcurementDraft.count({
+        where: { status: { [Op.in]: ['Submitted', 'Locked'] } }
+      }),
+      approvedDrafts: await ProcurementDraft.count({
+        where: { status: 'Approved' }
+      }),
+      totalInventories: await Inventory.count(),
+      totalBhps: await Bhp.count()
+    };
+  }
+
+  if (user.role === 'Staf Laboratorium') {
+    return {
+      totalInventories: await Inventory.count(),
+      totalBhps: await Bhp.count(),
+      totalRooms: await Room.count(),
+      totalLogs: await MaintenanceLog.count()
+    };
+  }
+
+  if (user.role === 'Staf Administrasi') {
+    const approvedDrafts = await ProcurementDraft.findAll({
+      where: { status: 'Approved' },
+      include: [
+        {
+          model: ProcurementItem,
+          as: 'items',
+          where: { status: 'Approved' },
+          required: false,
+          include: [
+            { model: ProcurementReceipt, as: 'receipts' },
+            { model: Inventory, as: 'receivedInventories' }
+          ]
+        }
+      ]
+    });
+
+    const approvedItems = approvedDrafts.flatMap(draft => draft.items || []);
+    const totalReceived = approvedItems.reduce((total, item) => total + getReceivedTotal(item), 0);
+    const totalLabeled = approvedItems.reduce((total, item) => total + getLabeledTotal(item), 0);
+
+    return {
+      approvedDrafts: approvedDrafts.length,
+      approvedItems: approvedItems.length,
+      receivedItems: totalReceived,
+      pendingLabels: Math.max(totalReceived - totalLabeled, 0)
+    };
+  }
+
+  return {
+    totalInventories: await Inventory.count(),
+    totalBhps: await Bhp.count(),
+    totalRooms: await Room.count(),
+    totalLogs: await MaintenanceLog.count()
+  };
+}
+
+exports.getDashboardStats = async (req, res, next) => {
+  try {
+    const stats = await getDashboardStatsForUser(req.session.user);
+    res.json({
+      ok: true,
+      role: req.session.user.role,
+      stats,
+      updatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 /**
  * Render the main secure dashboard with active metrics
  */

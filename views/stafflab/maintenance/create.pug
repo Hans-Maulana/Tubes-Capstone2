@@ -31,7 +31,7 @@ block content
       .card
         .card-body
           h5.card-title.fw-semibold.mb-4 Formulir Pencatatan Pemeliharaan Alat
-          form(action="/stafflab/maintenance" method="POST" onsubmit="return confirm('Apakah Anda yakin data maintenance yang dimasukkan sudah benar?')")
+          form(action="/stafflab/maintenance" method="POST" data-confirm-message="Apakah Anda yakin data maintenance yang dimasukkan sudah benar?")
             .row
               .col-md-6.mb-3
                 label.form-label Barang Inventaris

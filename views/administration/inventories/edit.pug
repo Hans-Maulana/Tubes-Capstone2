@@ -38,7 +38,7 @@ block content
             .mb-3
               label.form-label QR Saat Ini
               img.rounded.border.d-block(src=inventory.qr_image_path alt=`QR ${inventory.label_number}` style="width: 96px; height: 96px; object-fit: cover;")
-          form(action=`/administration/inventories/${inventory.id}/edit` method="POST" onsubmit="return confirm('Simpan perubahan dan regenerate QR code?')")
+          form(action=`/administration/inventories/${inventory.id}/edit` method="POST" data-confirm-message="Simpan perubahan dan regenerate QR code?")
             .row
               .col-md-6.mb-3
                 label.form-label Kategori Barang

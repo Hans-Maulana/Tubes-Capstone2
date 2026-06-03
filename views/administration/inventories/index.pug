@@ -163,7 +163,7 @@ block content
                     .d-flex.justify-content-center.gap-1
                       a.btn.btn-sm.btn-outline-primary(href=`/administration/inventories/${inv.id}/edit`)
                         i.ti.ti-edit
-                      form(action=`/administration/inventories/${inv.id}/delete` method="POST" onsubmit="return confirm('Hapus inventaris ini?')")
+                      form(action=`/administration/inventories/${inv.id}/delete` method="POST" data-confirm-message="Hapus inventaris ini?")
                         button.btn.btn-sm.btn-outline-danger(type="submit")
                           i.ti.ti-trash
             else

@@ -83,11 +83,23 @@
 
     if (parentForm && !parentForm.dataset.categoryWarnBound && !parentForm.dataset.ajaxItemForm) {
       parentForm.dataset.categoryWarnBound = '1';
-      parentForm.addEventListener('submit', function (e) {
+      parentForm.addEventListener('submit', async function (e) {
+        if (parentForm.dataset.replacementConfirmSubmitting === '1') return;
+
         const msg = getCategoryMismatchMessage(root);
-        if (msg && !window.confirm(`${msg}\n\nLanjutkan menyimpan?`)) {
-          e.preventDefault();
-        }
+        if (!msg) return;
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        const confirmed = window.uiConfirm
+          ? await window.uiConfirm(`${msg}\n\nLanjutkan menyimpan?`, { title: 'Periksa Kategori Pengganti', confirmText: 'Tetap Simpan' })
+          : true;
+
+        if (!confirmed) return;
+
+        parentForm.dataset.replacementConfirmSubmitting = '1';
+        HTMLFormElement.prototype.submit.call(parentForm);
       });
     }
 

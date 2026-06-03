@@ -75,7 +75,7 @@ block content
           else
             .d-flex.flex-column.gap-2
               if draft.status === 'Submitted'
-                form(action=`/procurement-drafts/${draft.id}/lock` method="POST" onsubmit="return confirm('Apakah Anda yakin ingin mengajukan finalisasi draf ini? Setelah diajukan, draf tidak dapat diubah lagi.')")
+                form(action=`/procurement-drafts/${draft.id}/lock` method="POST" data-confirm-message="Apakah Anda yakin ingin mengajukan finalisasi draf ini? Setelah diajukan, draf tidak dapat diubah lagi.")
                   button.btn.btn-dark.w-100(type="submit")
                     i.ti.ti-lock.me-1
                     | Pengajuan Finalisasi
@@ -163,7 +163,7 @@ block content
                           .d-flex.justify-content-center.gap-2
                             a.btn.btn-sm.btn-outline-warning(href=`/procurement-drafts/${draft.id}/items/${item.id}/edit`)
                               i.ti.ti-edit
-                            form(action=`/procurement-drafts/${draft.id}/items/${item.id}/delete` method="POST" onsubmit="return confirm('Hapus item ini dari draf?')")
+                            form(action=`/procurement-drafts/${draft.id}/items/${item.id}/delete` method="POST" data-confirm-message="Hapus item ini dari draf?")
                               button.btn.btn-sm.btn-outline-danger(type="submit")
                                 i.ti.ti-trash
                 else
@@ -338,8 +338,11 @@ block scripts
           const pickerRoot = replacementSection && replacementSection.querySelector('[data-picker-root]');
           if (pickerRoot && window.getReplacementCategoryMismatch) {
             const categoryMsg = window.getReplacementCategoryMismatch(pickerRoot);
-            if (categoryMsg && !window.confirm(`${categoryMsg}\n\nLanjutkan menyimpan?`)) {
-              return;
+            if (categoryMsg) {
+              const confirmed = window.uiConfirm
+                ? await window.uiConfirm(`${categoryMsg}\n\nLanjutkan menyimpan?`, { title: 'Periksa Kategori Pengganti', confirmText: 'Tetap Simpan' })
+                : true;
+              if (!confirmed) return;
             }
           }
 

@@ -86,13 +86,13 @@ block content
                 | Harap setujui atau tolak semua item terlebih dahulu untuk memfinalisasi draf ini.
             else
               .d-flex.flex-column.gap-2
-                form(action=`/procurement-drafts-history/${draft.id}/finalize` method="POST" onsubmit="return confirm('Apakah Anda yakin ingin MENYETUJUI draf pengadaan ini secara keseluruhan?')")
+                form(action=`/procurement-drafts-history/${draft.id}/finalize` method="POST" data-confirm-message="Apakah Anda yakin ingin MENYETUJUI draf pengadaan ini secara keseluruhan?")
                   input(type="hidden" name="decision" value="Approved")
                   button.btn.btn-success.w-100(type="submit")
                     i.ti.ti-check.me-1
                     | Setujui Draf (Final)
                 
-                form(action=`/procurement-drafts-history/${draft.id}/finalize` method="POST" onsubmit="return confirm('Apakah Anda yakin ingin MENOLAK draf pengadaan ini secara keseluruhan?')")
+                form(action=`/procurement-drafts-history/${draft.id}/finalize` method="POST" data-confirm-message="Apakah Anda yakin ingin MENOLAK draf pengadaan ini secara keseluruhan?")
                   input(type="hidden" name="decision" value="Rejected")
                   button.btn.btn-danger.w-100(type="submit")
                     i.ti.ti-x.me-1

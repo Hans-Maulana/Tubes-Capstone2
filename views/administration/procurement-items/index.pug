@@ -78,7 +78,7 @@ block content
                         a.btn.btn-sm.btn-outline-success(href=`/administration/procurements/${item.draft.id}`)
                           i.ti.ti-calendar-plus.me-1
                           | Receipt
-                      form(action=`/administration/procurement-items/${item.id}/delete` method="POST" onsubmit="return confirm('Hapus item pengadaan ini?')")
+                      form(action=`/administration/procurement-items/${item.id}/delete` method="POST" data-confirm-message="Hapus item pengadaan ini?")
                         button.btn.btn-sm.btn-outline-danger(type="submit" disabled=(receivedTotal > 0 || labeledTotal > 0))
                           i.ti.ti-trash
             else

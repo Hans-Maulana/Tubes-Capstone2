@@ -46,7 +46,7 @@ block content
             else
               span.badge.bg-danger Rusak
 
-          form(action=`/stafflab/inventories/${inventory.id}/change-status` method="POST" onsubmit="return confirm('Ubah status inventaris ini?')")
+          form(action=`/stafflab/inventories/${inventory.id}/change-status` method="POST" data-confirm-message="Ubah status inventaris ini?")
             .mb-4
               label.form-label Kondisi Baru
               select.form-select(name="condition" required)

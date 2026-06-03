@@ -14,11 +14,36 @@ html(lang="en")
       /* =========================================
          FLEXBOX DASHBOARD GRID SYSTEM 
          ========================================= */
+      :root {
+        --ui-bg: #f4f7fb;
+        --ui-surface: rgba(255, 255, 255, 0.94);
+        --ui-surface-strong: #ffffff;
+        --ui-border: #dfe7f1;
+        --ui-border-soft: #edf2f7;
+        --ui-text: #07152f;
+        --ui-muted: #718096;
+        --ui-primary: #2454c6;
+        --ui-primary-dark: #173a96;
+        --ui-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+        --ui-shadow-soft: 0 7px 20px rgba(15, 23, 42, 0.055);
+        --ui-radius: 8px;
+      }
+
+      html {
+        height: 100%;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+      }
+
       body {
         margin: 0;
         padding: 0;
         overflow: hidden; /* Hide scrollbars on body */
-        background: #f8f9fa;
+        background:
+          radial-gradient(circle at 18% 8%, rgba(36, 84, 198, 0.08), transparent 28%),
+          radial-gradient(circle at 92% 18%, rgba(23, 162, 184, 0.08), transparent 26%),
+          var(--ui-bg);
+        color: var(--ui-text);
       }
       
       /* 1. Main Container (100vw, 100vh) */
@@ -31,12 +56,14 @@ html(lang="en")
 
       /* 2A. Kolom Kiri: Sidebar (25%) */
       .sidebar-column {
-        flex: 0 0 260px; /* Lebar tetap sidebar, atau gunakan persentase e.g., 25% */
+        flex: 0 0 232px; /* Compact sidebar width */
         height: 100vh;
-        background: #fff;
-        border-right: 1px solid #e5eaef;
+        background: rgba(255, 255, 255, 0.92);
+        border-right: 1px solid var(--ui-border);
         overflow-y: auto;
         z-index: 100;
+        box-shadow: 10px 0 32px rgba(15, 23, 42, 0.04);
+        backdrop-filter: blur(16px);
       }
       
       /* WrapPixel sidebar CSS overrides to fit cleanly in Flexbox */
@@ -57,34 +84,569 @@ html(lang="en")
 
       /* 3A. Bagian Atas: Header */
       .app-header {
-        flex: 0 0 70px; /* Tinggi fix 70px */
+        flex: 0 0 58px; /* Compact fixed height */
         display: flex;
         align-items: center;
-        background: #fff;
-        padding: 0 25px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        background: rgba(255, 255, 255, 0.88);
+        padding: 0 18px;
+        border-bottom: 1px solid rgba(223, 231, 241, 0.92);
+        box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
         z-index: 50;
         width: 100%;
         position: static !important; /* Cabut position fixed yang lama */
+        backdrop-filter: blur(16px);
       }
 
       /* 3B. Bagian Tengah: Main Content */
       .body-wrapper-inner {
         flex: 1; /* Mengisi sisa ruang tinggi vertikal */
-        padding: 25px;
+        padding: 16px 18px;
       }
 
       /* 3C. Bagian Bawah: Footer */
       .footer-section {
         flex: 0 0 auto;
+        background: rgba(255, 255, 255, 0.86);
+        border-top: 1px solid var(--ui-border-soft);
+      }
+
+      /* =========================================
+         GLOBAL COMPACT POLISH
+         ========================================= */
+      .container-fluid {
+        max-width: 1560px;
+      }
+
+      .brand-logo {
+        min-height: 58px;
+        padding: 0 14px !important;
+        border-bottom: 1px solid var(--ui-border-soft);
+      }
+
+      .logo-img h4 {
+        font-size: 1rem;
+        letter-spacing: 0;
+      }
+
+      .brand-mark {
+        width: 30px;
+        height: 30px;
+        border-radius: var(--ui-radius);
+        background: #eef4ff;
+        box-shadow: inset 0 0 0 1px rgba(36, 84, 198, 0.12);
+      }
+
+      .brand-subtitle {
+        display: block;
+        margin-top: 1px;
+        color: #7a8798;
+        font-size: 0.66rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .sidebar-nav {
+        padding: 12px 10px 18px !important;
+      }
+
+      #sidebarnav {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      #sidebarnav .nav-small-cap {
+        margin: 14px 8px 5px !important;
+        padding: 0 !important;
+        min-height: auto;
+        color: #6b7890;
+        font-size: 0.66rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      #sidebarnav .nav-small-cap-icon {
+        display: none;
+      }
+
+      #sidebarnav .sidebar-link {
+        min-height: 38px;
+        margin: 0;
+        padding: 9px 11px !important;
+        border-radius: var(--ui-radius);
+        color: #18233a;
+        font-size: 0.84rem;
+        font-weight: 600;
+        transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+      }
+
+      #sidebarnav .sidebar-link i {
+        width: 20px;
+        min-width: 20px;
+        font-size: 1.08rem;
+      }
+
+      #sidebarnav .sidebar-link:hover {
+        background: #eef4ff;
+        color: var(--ui-primary);
+        transform: translateX(2px);
+      }
+
+      #sidebarnav .sidebar-link.active,
+      #sidebarnav .sidebar-item.selected > .sidebar-link {
+        background: linear-gradient(135deg, var(--ui-primary), #1f73d8);
+        color: #fff !important;
+        box-shadow: 0 8px 18px rgba(36, 84, 198, 0.24);
+      }
+
+      #sidebarnav .sidebar-link.active i,
+      #sidebarnav .sidebar-item.selected > .sidebar-link i {
+        color: #fff !important;
+      }
+
+      .navbar .nav-link {
+        padding: 7px 8px;
+      }
+
+      .app-header .navbar-nav.gap-3 {
+        gap: 0.8rem !important;
+      }
+
+      .app-header .fw-semibold {
+        font-size: 0.82rem;
+      }
+
+      .app-header .small {
+        font-size: 0.68rem !important;
+      }
+
+      .app-header img.rounded-circle {
+        width: 32px;
+        height: 32px;
+        border: 2px solid #fff;
+        box-shadow: 0 5px 14px rgba(15, 23, 42, 0.12);
+      }
+
+      .nav-icon-hover {
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+      }
+
+      .nav-icon-hover:hover {
+        background: #eef4ff;
+        transform: translateY(-1px);
+        box-shadow: var(--ui-shadow-soft);
+      }
+
+      .notification {
+        width: 7px !important;
+        height: 7px !important;
+        right: 5px !important;
+        top: 6px !important;
+        box-shadow: 0 0 0 3px #fff;
+      }
+
+      .dropdown-menu {
+        border: 1px solid var(--ui-border);
+        border-radius: var(--ui-radius);
+        box-shadow: var(--ui-shadow);
+      }
+
+      .body-wrapper-inner > .container-fluid > .row:first-child .card.bg-light-primary {
+        margin-bottom: 14px !important;
+        border: 1px solid rgba(207, 218, 239, 0.9);
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(239, 245, 255, 0.82)) !important;
+      }
+
+      .body-wrapper-inner > .container-fluid > .row:first-child .card.bg-light-primary .card-body {
+        padding: 14px 20px !important;
+      }
+
+      .body-wrapper-inner > .container-fluid > .row:first-child h4 {
+        margin-bottom: 4px !important;
+        font-size: clamp(1.02rem, 1.4vw, 1.28rem);
+        line-height: 1.25;
+      }
+
+      .body-wrapper-inner > .container-fluid > .row:first-child img {
+        max-height: 82px !important;
+        opacity: 0.78;
+      }
+
+      .breadcrumb {
+        font-size: 0.78rem;
+      }
+
+      .row {
+        --bs-gutter-x: 1rem;
+      }
+
+      .row.mt-4 {
+        margin-top: 0.85rem !important;
+      }
+
+      .card {
+        border: 1px solid var(--ui-border);
+        border-radius: var(--ui-radius);
+        box-shadow: var(--ui-shadow-soft);
+        background: var(--ui-surface);
+        overflow: hidden;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      }
+
+      .card:hover {
+        border-color: #cfd9ea;
+        box-shadow: var(--ui-shadow);
+        transform: translateY(-1px);
+      }
+
+      .card.shadow-none {
+        box-shadow: var(--ui-shadow-soft) !important;
+      }
+
+      .card-body {
+        padding: 18px !important;
+      }
+
+      .card-title {
+        font-size: 0.98rem;
+        line-height: 1.25;
+        color: var(--ui-text);
+      }
+
+      .card-subtitle,
+      .text-muted,
+      p {
+        color: var(--ui-muted) !important;
+      }
+
+      .card .rounded-circle[style*="48px"] {
+        width: 40px !important;
+        height: 40px !important;
+        box-shadow: inset 0 -8px 18px rgba(0, 0, 0, 0.08);
+      }
+
+      .card h4 {
+        font-size: 1.15rem;
+      }
+
+      .table-responsive {
+        border: 1px solid var(--ui-border-soft);
+        border-radius: var(--ui-radius);
+        overflow: auto;
+      }
+
+      .table {
+        --bs-table-bg: transparent;
+        margin-bottom: 0 !important;
+        font-size: 0.82rem;
+      }
+
+      .table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        padding: 10px 12px !important;
+        background: #f7f9fc;
+        color: #5c6a80 !important;
+        font-size: 0.73rem;
+        font-weight: 800 !important;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--ui-border) !important;
+      }
+
+      .table tbody td {
+        padding: 10px 12px !important;
+        border-bottom: 1px solid var(--ui-border-soft) !important;
+        vertical-align: middle;
+      }
+
+      .table tbody tr {
+        transition: background 0.15s ease;
+      }
+
+      .table tbody tr:hover {
+        background: rgba(36, 84, 198, 0.035);
+      }
+
+      .table h6,
+      .table p {
+        font-size: 0.82rem;
+      }
+
+      .badge {
+        border-radius: 999px !important;
+        padding: 0.34rem 0.54rem;
+        font-size: 0.72rem;
+        font-weight: 700 !important;
+      }
+
+      .btn {
+        border-radius: var(--ui-radius);
+        font-weight: 700;
+        letter-spacing: 0;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+      }
+
+      .btn:not(.btn-sm) {
+        padding: 0.45rem 0.74rem;
+        font-size: 0.84rem;
+      }
+
+      .btn-sm {
+        padding: 0.28rem 0.52rem;
+        font-size: 0.75rem;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 17px rgba(15, 23, 42, 0.12);
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--ui-primary), #1f73d8);
+        border-color: transparent;
+      }
+
+      .btn-primary:hover,
+      .btn-primary:focus {
+        background: linear-gradient(135deg, var(--ui-primary-dark), var(--ui-primary));
+      }
+
+      .d-grid .btn.py-3,
+      .btn.py-3 {
+        padding-top: 0.58rem !important;
+        padding-bottom: 0.58rem !important;
+      }
+
+      .form-label {
+        margin-bottom: 0.32rem;
+        color: #4a5b72;
+        font-size: 0.78rem;
+        font-weight: 800;
+      }
+
+      .form-control,
+      .form-select {
+        min-height: 38px;
+        border-color: var(--ui-border);
+        border-radius: var(--ui-radius);
+        color: var(--ui-text);
+        font-size: 0.84rem;
+        box-shadow: none;
+      }
+
+      textarea.form-control {
+        min-height: 86px;
+      }
+
+      .form-control:focus,
+      .form-select:focus {
+        border-color: rgba(36, 84, 198, 0.7);
+        box-shadow: 0 0 0 0.2rem rgba(36, 84, 198, 0.12);
+      }
+
+      .alert {
+        padding: 0.68rem 0.85rem;
+        border-radius: var(--ui-radius);
+        border-width: 1px;
+        box-shadow: var(--ui-shadow-soft);
+        font-size: 0.84rem;
+      }
+
+      .modal-content {
+        border: 1px solid var(--ui-border);
+        border-radius: var(--ui-radius);
+        box-shadow: var(--ui-shadow);
+      }
+
+      .ui-confirm-modal .modal-dialog {
+        max-width: 430px;
+      }
+
+      .ui-confirm-modal .modal-content {
+        overflow: hidden;
+        border: 0;
         background: #fff;
+      }
+
+      .ui-confirm-accent {
+        height: 4px;
+        background: linear-gradient(90deg, #2454c6, #10b981);
+      }
+
+      .ui-confirm-icon {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        border-radius: var(--ui-radius);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff3e6;
+        color: #b45309;
+        box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.12);
+      }
+
+      .ui-confirm-modal.is-danger .ui-confirm-accent {
+        background: linear-gradient(90deg, #dc2626, #f97316);
+      }
+
+      .ui-confirm-modal.is-danger .ui-confirm-icon {
+        background: #fff1f2;
+        color: #be123c;
+        box-shadow: inset 0 0 0 1px rgba(190, 18, 60, 0.12);
+      }
+
+      .ui-confirm-message {
+        white-space: pre-line;
+        color: #5d6b82;
+        font-size: 0.86rem;
+        line-height: 1.55;
+      }
+
+      .ui-confirm-modal .modal-body {
+        padding: 1.1rem 1.15rem 0.9rem;
+      }
+
+      .ui-confirm-modal .modal-footer {
+        padding: 0 1.15rem 1.1rem;
+        border: 0;
+      }
+
+      .modal-header,
+      .modal-footer {
+        padding: 0.85rem 1rem;
+        border-color: var(--ui-border-soft);
+      }
+
+      .modal-body {
+        padding: 1rem;
+      }
+
+      .list-group-item {
+        border-color: var(--ui-border-soft);
+      }
+
+      .footer-section .py-6 {
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+      }
+
+      @keyframes uiFadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .body-wrapper-inner .card,
+      .body-wrapper-inner .alert {
+        animation: uiFadeUp 0.32s ease both;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
+
+      @media (max-width: 1199.98px) {
+        .dashboard-wrapper {
+          display: flex;
+          overflow: hidden;
+        }
+
+        .sidebar-column {
+          position: fixed;
+          inset: 0 auto 0 0;
+          width: 232px;
+          transform: translateX(-105%);
+          transition: transform 0.22s ease;
+          z-index: 1060;
+          display: block;
+        }
+
+        #main-wrapper.show-sidebar .sidebar-column {
+          transform: translateX(0);
+        }
+
+        #main-wrapper.show-sidebar::after {
+          content: "";
+          position: fixed;
+          inset: 0;
+          z-index: 1050;
+          background: rgba(7, 21, 47, 0.36);
+          backdrop-filter: blur(2px);
+        }
+
+        .main-wrapper-column {
+          width: 100vw;
+          min-height: 100vh;
+          overflow-y: auto;
+        }
+
+        .app-header {
+          position: sticky !important;
+          top: 0;
+        }
+      }
+
+      @media (max-width: 767.98px) {
+        .body-wrapper-inner {
+          padding: 12px;
+        }
+
+        .app-header {
+          padding: 0 12px;
+        }
+
+        .card-body {
+          padding: 14px !important;
+        }
+
+        .body-wrapper-inner > .container-fluid > .row:first-child .col-9 {
+          width: 100%;
+        }
+
+        .body-wrapper-inner > .container-fluid > .row:first-child .col-3 {
+          display: none;
+        }
+
+        .d-flex.align-items-center.justify-content-between {
+          align-items: flex-start !important;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .table-responsive {
+          margin-left: -2px;
+          margin-right: -2px;
+        }
       }
       
     block styles
 
   body
     //- 1. Container Utama
-    .dashboard-wrapper
+    #main-wrapper.dashboard-wrapper
     
       //- 2A. Kolom Kiri (Sidebar)
       .sidebar-column
@@ -104,6 +666,21 @@ html(lang="en")
         //- 3C. Footer
         .footer-section
           include footer.pug
+
+    #uiConfirmModal.modal.fade.ui-confirm-modal(tabindex="-1" aria-hidden="true")
+      .modal-dialog.modal-dialog-centered
+        .modal-content
+          .ui-confirm-accent
+          .modal-body
+            .d-flex.align-items-start.gap-3
+              .ui-confirm-icon
+                i.ti.ti-alert-triangle.fs-6
+              div
+                h5#uiConfirmTitle.fw-semibold.mb-2 Konfirmasi Tindakan
+                p#uiConfirmMessage.ui-confirm-message.mb-0 Pastikan data sudah benar sebelum melanjutkan.
+          .modal-footer.d-flex.justify-content-end.gap-2
+            button#uiConfirmCancel.btn.btn-outline-secondary(type="button" data-bs-dismiss="modal") Batal
+            button#uiConfirmOk.btn.btn-primary(type="button") Lanjutkan
 
     //- Skrip JavaScript Bawaan
     script(src="/assets/libs/jquery/dist/jquery.min.js")
@@ -125,5 +702,92 @@ html(lang="en")
           }
         });
       });
+
+      (function () {
+        const modalEl = document.getElementById('uiConfirmModal');
+        if (!modalEl || !window.bootstrap) return;
+
+        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
+        const titleEl = document.getElementById('uiConfirmTitle');
+        const messageEl = document.getElementById('uiConfirmMessage');
+        const okBtn = document.getElementById('uiConfirmOk');
+        const cancelBtn = document.getElementById('uiConfirmCancel');
+        let resolver = null;
+
+        function normalizeMessage(message) {
+          return String(message || 'Lanjutkan tindakan ini?').replace(/\\n/g, '\n').trim();
+        }
+
+        function isDangerMessage(message) {
+          return /hapus|delete|tolak|menolak|rusak|ubah status|regenerate/i.test(message || '');
+        }
+
+        function extractConfirmMessage(handlerText) {
+          if (!handlerText) return null;
+          const single = handlerText.match(/confirm\('([\s\S]*?)'\)/);
+          if (single) return single[1].replace(/\\'/g, "'");
+          const double = handlerText.match(/confirm\("([\s\S]*?)"\)/);
+          if (double) return double[1].replace(/\\"/g, '"');
+          return null;
+        }
+
+        window.uiConfirm = function (message, options = {}) {
+          const normalizedMessage = normalizeMessage(message);
+          const danger = options.danger !== undefined ? options.danger : isDangerMessage(normalizedMessage);
+
+          modalEl.classList.toggle('is-danger', danger);
+          titleEl.textContent = options.title || (danger ? 'Konfirmasi Tindakan Penting' : 'Konfirmasi Tindakan');
+          messageEl.textContent = normalizedMessage;
+          okBtn.textContent = options.confirmText || (danger ? 'Ya, Lanjutkan' : 'Lanjutkan');
+          cancelBtn.textContent = options.cancelText || 'Batal';
+          okBtn.className = danger ? 'btn btn-danger' : 'btn btn-primary';
+
+          return new Promise((resolve) => {
+            resolver = resolve;
+            modal.show();
+            setTimeout(() => okBtn.focus(), 150);
+          });
+        };
+
+        okBtn.addEventListener('click', function () {
+          if (resolver) resolver(true);
+          resolver = null;
+          modal.hide();
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+          if (resolver) resolver(false);
+          resolver = null;
+        });
+
+        document.addEventListener('submit', async function (event) {
+          const form = event.target;
+          if (!form || !form.getAttribute) return;
+
+          const handlerText = form.getAttribute('onsubmit');
+          const message = form.getAttribute('data-confirm-message') || extractConfirmMessage(handlerText);
+          if (!message || form.dataset.uiConfirmSubmitting === '1') return;
+
+          event.preventDefault();
+          event.stopImmediatePropagation();
+
+          const confirmed = await window.uiConfirm(message);
+          if (!confirmed) return;
+
+          form.dataset.uiConfirmSubmitting = '1';
+          form.removeAttribute('onsubmit');
+
+          const submitter = event.submitter;
+          if (submitter && submitter.name && !submitter.disabled) {
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = submitter.name;
+            hidden.value = submitter.value;
+            form.appendChild(hidden);
+          }
+
+          HTMLFormElement.prototype.submit.call(form);
+        }, true);
+      })();
       
     block scripts

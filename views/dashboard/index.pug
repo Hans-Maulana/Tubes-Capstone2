@@ -1,5 +1,19 @@
 extends ../layouts/master.pug
 
+block styles
+  style.
+    [data-dashboard-stat] {
+      display: inline-block;
+      min-width: 1.2ch;
+      transition: color 0.18s ease, transform 0.18s ease, text-shadow 0.18s ease;
+    }
+
+    [data-dashboard-stat].stat-updated {
+      color: #2454c6;
+      transform: translateY(-1px) scale(1.04);
+      text-shadow: 0 8px 18px rgba(36, 84, 198, 0.2);
+    }
+
 block content
   //- Welcome banner
   .row
@@ -26,7 +40,7 @@ block content
                 i.ti.ti-file-check.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Draf Disetujui
-                h4.fw-semibold.mb-0= adminStats ? adminStats.approvedDrafts : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="approvedDrafts")= adminStats ? adminStats.approvedDrafts : 0
       .col-sm-6.col-xl-3
         .card.bg-light-warning.shadow-none
           .card-body.p-4
@@ -35,7 +49,7 @@ block content
                 i.ti.ti-clipboard-list.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Item Disetujui
-                h4.fw-semibold.mb-0= adminStats ? adminStats.approvedItems : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="approvedItems")= adminStats ? adminStats.approvedItems : 0
       .col-sm-6.col-xl-3
         .card.bg-light-success.shadow-none
           .card-body.p-4
@@ -44,7 +58,7 @@ block content
                 i.ti.ti-truck-delivery.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Barang Diterima
-                h4.fw-semibold.mb-0= adminStats ? adminStats.receivedItems : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="receivedItems")= adminStats ? adminStats.receivedItems : 0
       .col-sm-6.col-xl-3
         .card.bg-light-danger.shadow-none
           .card-body.p-4
@@ -53,7 +67,7 @@ block content
                 i.ti.ti-qrcode.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Belum Berlabel
-                h4.fw-semibold.mb-0= adminStats ? adminStats.pendingLabels : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="pendingLabels")= adminStats ? adminStats.pendingLabels : 0
 
     .row.mt-4
       .col-lg-8.d-flex.align-items-stretch
@@ -104,6 +118,9 @@ block content
               a.btn.btn-outline-success.d-flex.align-items-center.gap-2.py-3.px-4(href="/administration/inventories")
                 i.ti.ti-qrcode.fs-5
                 | Input Inventaris & QR
+              a.btn.btn-outline-danger.d-flex.align-items-center.gap-2.py-3.px-4(href="/reports/admin-staff/pdf")
+                i.ti.ti-file-download.fs-5
+                | Unduh Laporan PDF
   else if staffLabDashboard
     //- Statistics Cards Row
     .row
@@ -115,7 +132,7 @@ block content
                 i.ti.ti-package.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Total Inventaris
-                h4.fw-semibold.mb-0= stats ? stats.totalInventories : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalInventories")= stats ? stats.totalInventories : 0
       .col-sm-6.col-xl-3
         .card.bg-light-warning.shadow-none
           .card-body.p-4
@@ -124,7 +141,7 @@ block content
                 i.ti.ti-archive.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Barang Habis Pakai
-                h4.fw-semibold.mb-0= stats ? stats.totalBhps : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalBhps")= stats ? stats.totalBhps : 0
       .col-sm-6.col-xl-3
         .card.bg-light-success.shadow-none
           .card-body.p-4
@@ -133,7 +150,7 @@ block content
                 i.ti.ti-door.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Ruangan Lab
-                h4.fw-semibold.mb-0= stats ? stats.totalRooms : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalRooms")= stats ? stats.totalRooms : 0
       .col-sm-6.col-xl-3
         .card.bg-light-danger.shadow-none
           .card-body.p-4
@@ -142,7 +159,7 @@ block content
                 i.ti.ti-tool.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Log Pemeliharaan
-                h4.fw-semibold.mb-0= stats ? stats.totalLogs : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalLogs")= stats ? stats.totalLogs : 0
 
     //- Recent Maintenance Logs & Quick Actions
     .row.mt-4
@@ -221,7 +238,7 @@ block content
                 i.ti.ti-file-description.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Draf Butuh Review
-                h4.fw-semibold.mb-0= stats ? stats.pendingDrafts : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="pendingDrafts")= stats ? stats.pendingDrafts : 0
       .col-sm-6.col-xl-3
         .card.bg-light-success.shadow-none
           .card-body.p-4
@@ -230,7 +247,7 @@ block content
                 i.ti.ti-file-check.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Draf Disetujui
-                h4.fw-semibold.mb-0= stats ? stats.approvedDrafts : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="approvedDrafts")= stats ? stats.approvedDrafts : 0
       .col-sm-6.col-xl-3
         .card.bg-light-primary.shadow-none
           .card-body.p-4
@@ -239,7 +256,7 @@ block content
                 i.ti.ti-package.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Total Inventaris
-                h4.fw-semibold.mb-0= stats ? stats.totalInventories : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalInventories")= stats ? stats.totalInventories : 0
       .col-sm-6.col-xl-3
         .card.bg-light-danger.shadow-none
           .card-body.p-4
@@ -248,7 +265,7 @@ block content
                 i.ti.ti-archive.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Barang Habis Pakai
-                h4.fw-semibold.mb-0= stats ? stats.totalBhps : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalBhps")= stats ? stats.totalBhps : 0
 
     //- Recent Submitted Drafts & Quick Actions
     .row.mt-4
@@ -306,6 +323,9 @@ block content
               a.btn.btn-outline-success.d-flex.align-items-center.gap-2.py-3.px-4(href="/inventories")
                 i.ti.ti-package.fs-5
                 | Lihat Semua Inventaris
+              a.btn.btn-outline-danger.d-flex.align-items-center.gap-2.py-3.px-4(href="/reports/kaprodi/pdf")
+                i.ti.ti-file-download.fs-5
+                | Unduh Laporan PDF
   else if labHeadDashboard
     //- Statistics Cards Row
     .row
@@ -317,7 +337,7 @@ block content
                 i.ti.ti-file-description.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Total Draf Pengadaan
-                h4.fw-semibold.mb-0= stats ? stats.totalDrafts : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalDrafts")= stats ? stats.totalDrafts : 0
       .col-sm-6.col-xl-3
         .card.bg-light-warning.shadow-none
           .card-body.p-4
@@ -326,7 +346,7 @@ block content
                 i.ti.ti-file-check.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Draf Diajukan/Selesai
-                h4.fw-semibold.mb-0= stats ? stats.submittedDrafts : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="submittedDrafts")= stats ? stats.submittedDrafts : 0
       .col-sm-6.col-xl-3
         .card.bg-light-success.shadow-none
           .card-body.p-4
@@ -335,7 +355,7 @@ block content
                 i.ti.ti-package.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Total Inventaris
-                h4.fw-semibold.mb-0= stats ? stats.totalInventories : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalInventories")= stats ? stats.totalInventories : 0
       .col-sm-6.col-xl-3
         .card.bg-light-danger.shadow-none
           .card-body.p-4
@@ -344,7 +364,7 @@ block content
                 i.ti.ti-archive.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Barang Habis Pakai
-                h4.fw-semibold.mb-0= stats ? stats.totalBhps : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalBhps")= stats ? stats.totalBhps : 0
 
     //- Recent Drafts & Quick Actions
     .row.mt-4
@@ -407,6 +427,9 @@ block content
               a.btn.btn-outline-warning.d-flex.align-items-center.gap-2.py-3.px-4(href="/inventories")
                 i.ti.ti-package.fs-5
                 | Lihat Semua Inventaris
+              a.btn.btn-outline-danger.d-flex.align-items-center.gap-2.py-3.px-4(href="/reports/lab-head/pdf")
+                i.ti.ti-file-download.fs-5
+                | Unduh Laporan PDF
   else if superAdminDashboard
     //- Statistics Cards Row
     .row
@@ -418,7 +441,7 @@ block content
                 i.ti.ti-users.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Total Pengguna
-                h4.fw-semibold.mb-0= stats ? stats.totalUsers : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalUsers")= stats ? stats.totalUsers : 0
       .col-sm-6.col-xl-3
         .card.bg-light-success.shadow-none
           .card-body.p-4
@@ -427,7 +450,7 @@ block content
                 i.ti.ti-door.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Ruangan Lab
-                h4.fw-semibold.mb-0= stats ? stats.totalRooms : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalRooms")= stats ? stats.totalRooms : 0
       .col-sm-6.col-xl-3
         .card.bg-light-warning.shadow-none
           .card-body.p-4
@@ -436,7 +459,7 @@ block content
                 i.ti.ti-package.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Total Inventaris
-                h4.fw-semibold.mb-0= stats ? stats.totalInventories : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalInventories")= stats ? stats.totalInventories : 0
       .col-sm-6.col-xl-3
         .card.bg-light-danger.shadow-none
           .card-body.p-4
@@ -445,7 +468,7 @@ block content
                 i.ti.ti-archive.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Barang Habis Pakai
-                h4.fw-semibold.mb-0= stats ? stats.totalBhps : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalBhps")= stats ? stats.totalBhps : 0
 
     //- Recent Users & Quick Actions
     .row.mt-4
@@ -511,7 +534,7 @@ block content
                 i.ti.ti-package.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Total Inventaris
-                h4.fw-semibold.mb-0= stats ? stats.totalInventories : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalInventories")= stats ? stats.totalInventories : 0
       .col-sm-6.col-xl-3
         .card.bg-light-warning.shadow-none
           .card-body.p-4
@@ -520,7 +543,7 @@ block content
                 i.ti.ti-archive.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Barang Habis Pakai
-                h4.fw-semibold.mb-0= stats ? stats.totalBhps : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalBhps")= stats ? stats.totalBhps : 0
       .col-sm-6.col-xl-3
         .card.bg-light-success.shadow-none
           .card-body.p-4
@@ -529,7 +552,7 @@ block content
                 i.ti.ti-door.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Ruangan Lab
-                h4.fw-semibold.mb-0= stats ? stats.totalRooms : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalRooms")= stats ? stats.totalRooms : 0
       .col-sm-6.col-xl-3
         .card.bg-light-danger.shadow-none
           .card-body.p-4
@@ -538,7 +561,7 @@ block content
                 i.ti.ti-tool.fs-6
               .ms-3
                 h6.mb-0.text-muted.small Log Pemeliharaan
-                h4.fw-semibold.mb-0= stats ? stats.totalLogs : 0
+                h4.fw-semibold.mb-0(data-dashboard-stat="totalLogs")= stats ? stats.totalLogs : 0
 
     //- Recent Activities & Quick Actions
     .row.mt-4
@@ -597,3 +620,75 @@ block content
               a.btn.btn-outline-warning.d-flex.align-items-center.gap-2.py-3.px-4(href="/maintenance-logs")
                 i.ti.ti-tool.fs-5
                 | Catat Pemeliharaan
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function () {
+      const statEls = Array.from(document.querySelectorAll('[data-dashboard-stat]'));
+      if (statEls.length === 0) return;
+
+      const numberFormatter = new Intl.NumberFormat('id-ID');
+      let isPolling = false;
+      let pollTimer = null;
+
+      function normalizeNumber(value) {
+        const number = Number(value || 0);
+        return Number.isFinite(number) ? number : 0;
+      }
+
+      function setStatValue(el, value) {
+        const nextValue = normalizeNumber(value);
+        const nextText = numberFormatter.format(nextValue);
+        if (el.textContent.trim() === nextText) return;
+
+        el.textContent = nextText;
+        el.classList.remove('stat-updated');
+        void el.offsetWidth;
+        el.classList.add('stat-updated');
+        window.setTimeout(function () {
+          el.classList.remove('stat-updated');
+        }, 520);
+      }
+
+      async function pollDashboardStats() {
+        if (isPolling || document.hidden) return;
+        isPolling = true;
+
+        try {
+          const response = await fetch('/dashboard/stats', {
+            headers: {
+              Accept: 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            cache: 'no-store'
+          });
+
+          if (!response.ok) return;
+          const data = await response.json();
+          if (!data || !data.ok || !data.stats) return;
+
+          statEls.forEach(function (el) {
+            const key = el.getAttribute('data-dashboard-stat');
+            if (Object.prototype.hasOwnProperty.call(data.stats, key)) {
+              setStatValue(el, data.stats[key]);
+            }
+          });
+        } catch (err) {
+          // Biarkan polling berikutnya mencoba lagi.
+        } finally {
+          isPolling = false;
+        }
+      }
+
+      function startPolling() {
+        window.clearInterval(pollTimer);
+        pollDashboardStats();
+        pollTimer = window.setInterval(pollDashboardStats, 5000);
+      }
+
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) pollDashboardStats();
+      });
+
+      startPolling();
+    });

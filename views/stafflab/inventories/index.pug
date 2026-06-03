@@ -121,7 +121,7 @@ block content
                               i.ti.ti-circle-check
                               span.d-none.d-md-inline.ms-1 Selesai
                           else
-                            form(action=`/stafflab/inventories/${inv.id}/start-maintenance` method="POST" onsubmit="return confirm('Tandai barang ini sedang maintenance?')")
+                            form(action=`/stafflab/inventories/${inv.id}/start-maintenance` method="POST" data-confirm-message="Tandai barang ini sedang maintenance?")
                               button.btn.btn-sm.btn-warning(type="submit" title="Mulai Maintenance")
                                 i.ti.ti-tool
                                 span.d-none.d-md-inline.ms-1 Maint.
