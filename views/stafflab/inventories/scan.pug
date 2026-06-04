@@ -1,5 +1,11 @@
 extends ../../layouts/master.pug
 
+block styles
+  style.
+    #qr-reader video {
+      transform: scaleX(-1);
+    }
+
 block content
   .row
     .col-12
@@ -31,10 +37,30 @@ block content
       .card
         .card-body
           h5.card-title.fw-semibold.mb-2 Pindai QR Code Barang
-          p.card-subtitle.mb-4 Arahkan kamera ke QR code label inventaris. Setelah terbaca, Anda akan diarahkan ke Kelola Inventaris dengan filter nomor label tersebut.
+          p.card-subtitle.mb-2 Arahkan kamera ke QR code label inventaris. Setelah terbaca, Anda akan diarahkan ke Kelola Inventaris dengan filter nomor label tersebut.
+          ul.small.text-muted.mb-4.ps-3
+            li Jaga QR dalam kotak putih dan dekatkan perlahan (±15–30 cm).
+            li Pastikan pencahayaan cukup dan QR tidak blur.
+            li QR di layar monitor sering sulit terbaca — gunakan label cetak atau unggah foto QR di bawah.
+            li Jika muncul logo OBS, pilih webcam laptop di dropdown kamera atau matikan OBS Virtual Camera.
 
-          #qr-reader.rounded.border.mb-3(style="max-width: 100%;")
+          .mb-3#camera-picker-wrap(style="display: none;")
+            label.form-label.fw-semibold(for="camera-select") Pilih kamera
+            select#camera-select.form-select
+          #qr-reader.rounded.border.mb-3(style="max-width: 100%; min-height: 280px;")
           #qr-status.alert.alert-info.mb-3 Menunggu akses kamera...
+
+          .mb-4
+            label.form-label.fw-semibold(for="manual-label") Atau ketik nomor label
+            .input-group
+              input#manual-label.form-control(type="text" placeholder="Contoh: LAB-INV-2026-007")
+              button#btn-manual-search.btn.btn-primary(type="button")
+                i.ti.ti-search.me-1
+                | Cari
+
+          .mb-4
+            label.form-label.fw-semibold(for="qr-file") Atau unggah foto QR
+            input#qr-file.form-control(type="file" accept="image/*")
 
           .d-flex.gap-2.flex-wrap
             a.btn.btn-outline-secondary(href="/stafflab/inventories")
@@ -50,8 +76,48 @@ block scripts
     document.addEventListener('DOMContentLoaded', function () {
       const statusEl = document.getElementById('qr-status');
       const stopBtn = document.getElementById('btn-stop-scan');
+      const manualInput = document.getElementById('manual-label');
+      const manualBtn = document.getElementById('btn-manual-search');
+      const fileInput = document.getElementById('qr-file');
+      const cameraPickerWrap = document.getElementById('camera-picker-wrap');
+      const cameraSelect = document.getElementById('camera-select');
       let html5QrCode = null;
       let isProcessing = false;
+      let cameraStarted = false;
+      let availableCameras = [];
+
+      function isVirtualCamera(label) {
+        return /obs|virtual|snap|manycam|nvidia broadcast|droidcam|epocam|xsplit|vcam|iriun/i.test(label || '');
+      }
+
+      function pickBestCamera(cameras) {
+        const realCameras = cameras.filter(function (c) {
+          return !isVirtualCamera(c.label);
+        });
+        const candidates = realCameras.length > 0 ? realCameras : cameras;
+
+        const preferred = candidates.find(function (c) {
+          return /integrated|built.?in|facetime|user facing|front|usb|hd|webcam|lenovo|acer|asus|dell|hp|camera/i.test(c.label || '');
+        });
+        if (preferred) return preferred;
+
+        const notBack = candidates.find(function (c) {
+          return !/back|rear|environment/i.test(c.label || '');
+        });
+        return notBack || candidates[0];
+      }
+
+      function fillCameraSelect(cameras, selectedId) {
+        cameraSelect.innerHTML = '';
+        cameras.forEach(function (camera) {
+          const option = document.createElement('option');
+          option.value = camera.id;
+          option.textContent = camera.label || ('Kamera ' + camera.id);
+          if (camera.id === selectedId) option.selected = true;
+          cameraSelect.appendChild(option);
+        });
+        cameraPickerWrap.style.display = cameras.length > 1 ? 'block' : 'none';
+      }
 
       function extractLabel(decodedText) {
         const text = (decodedText || '').trim();
@@ -62,7 +128,37 @@ block scripts
           return decodeURIComponent(parts[parts.length - 1].split(/[?#]/)[0]);
         }
 
+        if (/^https?:\/\//i.test(text)) {
+          try {
+            const url = new URL(text);
+            const segments = url.pathname.split('/').filter(Boolean);
+            if (segments[0] === 'inventory-label' && segments[1]) {
+              return decodeURIComponent(segments[1]);
+            }
+          } catch (e) {
+            // fall through to raw text
+          }
+        }
+
         return text;
+      }
+
+      function goToLabel(label) {
+        const trimmed = (label || '').trim();
+        if (!trimmed) {
+          statusEl.className = 'alert alert-warning mb-3';
+          statusEl.textContent = 'Nomor label kosong. Masukkan label atau scan QR.';
+          return;
+        }
+
+        statusEl.className = 'alert alert-success mb-3';
+        statusEl.textContent = 'Mencari inventaris: ' + trimmed + '...';
+
+        if (html5QrCode) {
+          html5QrCode.stop().catch(function () {});
+        }
+
+        window.location.href = '/stafflab/inventories?label=' + encodeURIComponent(trimmed);
       }
 
       function onScanSuccess(decodedText) {
@@ -78,18 +174,69 @@ block scripts
         }
 
         statusEl.className = 'alert alert-success mb-3';
-        statusEl.textContent = `QR terbaca: ${label}. Mencari inventaris...`;
-
-        if (html5QrCode) {
-          html5QrCode.stop().catch(function () {});
-        }
-
-        window.location.href = '/stafflab/inventories?label=' + encodeURIComponent(label);
+        statusEl.textContent = 'QR terbaca: ' + label + '. Mencari inventaris...';
+        goToLabel(label);
       }
 
       function onScanFailure() {
         // Abaikan error frame-by-frame agar tidak spam
       }
+
+      const scanConfig = {
+        fps: 15,
+        qrbox: function (viewfinderWidth, viewfinderHeight) {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const size = Math.floor(minEdge * 0.75);
+          return { width: size, height: size };
+        },
+        aspectRatio: 1.0,
+        disableFlip: false
+      };
+
+      manualBtn.addEventListener('click', function () {
+        goToLabel(manualInput.value);
+      });
+
+      manualInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          goToLabel(manualInput.value);
+        }
+      });
+
+      fileInput.addEventListener('change', function (e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        if (typeof Html5Qrcode === 'undefined') {
+          statusEl.className = 'alert alert-danger mb-3';
+          statusEl.textContent = 'Gagal memuat library scan QR. Periksa koneksi internet.';
+          return;
+        }
+
+        statusEl.className = 'alert alert-info mb-3';
+        statusEl.textContent = 'Membaca QR dari foto...';
+
+        function scanFromFile() {
+          html5QrCode.scanFile(file, true)
+            .then(function (decodedText) {
+              onScanSuccess(decodedText);
+            })
+            .catch(function () {
+              statusEl.className = 'alert alert-warning mb-3';
+              statusEl.textContent = 'QR tidak terbaca dari foto. Coba foto lebih jelas atau ketik nomor label.';
+            });
+        }
+
+        if (html5QrCode && cameraStarted) {
+          html5QrCode.stop().then(function () {
+            cameraStarted = false;
+            scanFromFile();
+          }).catch(scanFromFile);
+        } else {
+          scanFromFile();
+        }
+      });
 
       if (typeof Html5Qrcode === 'undefined') {
         statusEl.className = 'alert alert-danger mb-3';
@@ -99,29 +246,72 @@ block scripts
 
       html5QrCode = new Html5Qrcode('qr-reader');
 
-      Html5Qrcode.getCameras()
-        .then(function (cameras) {
-          if (!cameras || cameras.length === 0) {
-            statusEl.className = 'alert alert-danger mb-3';
-            statusEl.textContent = 'Kamera tidak ditemukan. Pastikan perangkat memiliki kamera dan izin sudah diberikan.';
-            return;
-          }
+      function startCamera(cameraConfig) {
+        if (cameraStarted) {
+          return html5QrCode.stop().then(function () {
+            cameraStarted = false;
+            return startCamera(cameraConfig);
+          });
+        }
 
-          const cameraId = cameras[0].id;
+        return html5QrCode.start(
+          cameraConfig,
+          scanConfig,
+          onScanSuccess,
+          onScanFailure
+        ).then(function () {
+          cameraStarted = true;
           statusEl.className = 'alert alert-info mb-3';
           statusEl.textContent = 'Kamera aktif. Arahkan ke QR code inventaris.';
           stopBtn.style.display = 'inline-block';
+        });
+      }
 
-          return html5QrCode.start(
-            cameraId,
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            onScanSuccess,
-            onScanFailure
-          );
+      function bootCameraWithId(cameraId) {
+        return startCamera(cameraId);
+      }
+
+      cameraSelect.addEventListener('change', function () {
+        const selectedId = cameraSelect.value;
+        if (!selectedId) return;
+        statusEl.className = 'alert alert-info mb-3';
+        statusEl.textContent = 'Mengganti kamera...';
+        bootCameraWithId(selectedId).catch(function (err) {
+          statusEl.className = 'alert alert-danger mb-3';
+          statusEl.textContent = 'Gagal mengganti kamera: ' + (err.message || err);
+        });
+      });
+
+      Html5Qrcode.getCameras()
+        .then(function (cameras) {
+          availableCameras = cameras || [];
+
+          if (availableCameras.length === 0) {
+            return startCamera({ facingMode: 'user' })
+              .catch(function () {
+                return startCamera({ facingMode: 'environment' });
+              });
+          }
+
+          const bestCamera = pickBestCamera(availableCameras);
+          fillCameraSelect(availableCameras, bestCamera.id);
+
+          if (isVirtualCamera(bestCamera.label) && availableCameras.length > 1) {
+            statusEl.className = 'alert alert-warning mb-3';
+            statusEl.textContent = 'Kamera virtual terdeteksi (mis. OBS). Pilih webcam asli di dropdown jika tampilan tidak normal.';
+          }
+
+          return bootCameraWithId(bestCamera.id);
+        })
+        .catch(function () {
+          return startCamera({ facingMode: 'user' })
+            .catch(function () {
+              return startCamera({ facingMode: 'environment' });
+            });
         })
         .catch(function (err) {
           statusEl.className = 'alert alert-danger mb-3';
-          statusEl.textContent = 'Gagal mengakses kamera: ' + (err.message || err);
+          statusEl.textContent = 'Gagal mengakses kamera: ' + (err.message || err) + '. Tutup OBS Virtual Camera atau pilih kamera lain. Anda juga bisa ketik label / unggah foto QR.';
         });
 
       stopBtn.addEventListener('click', function () {

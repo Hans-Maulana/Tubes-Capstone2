@@ -86,9 +86,9 @@ async function loadCreateInventoryFormData(item, formData = {}) {
   };
 }
 
-async function generateQrDataUrl(req, labelNumber) {
-  const scanUrl = `${req.protocol}://${req.get('host')}/inventory-label/${encodeURIComponent(labelNumber)}`;
-  return QRCode.toDataURL(scanUrl, {
+async function generateQrDataUrl(_req, labelNumber) {
+  const payload = String(labelNumber || '').trim();
+  return QRCode.toDataURL(payload, {
     errorCorrectionLevel: 'M',
     margin: 2,
     width: 320
