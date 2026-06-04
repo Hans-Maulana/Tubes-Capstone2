@@ -22,10 +22,25 @@ header.app-header
         li.nav-item.dropdown
           a#drop1.nav-link.nav-icon-hover(href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false")
             i.ti.ti-bell.fs-6
-            .notification.bg-primary.rounded-circle
-          .dropdown-menu.dropdown-menu-end.dropdown-menu-animate-up(aria-labelledby="drop1")
+            if notifications && notifications.length > 0
+              .notification.bg-primary.rounded-circle
+          .dropdown-menu.dropdown-menu-end.dropdown-menu-animate-up(aria-labelledby="drop1" style="min-width: 320px; max-height: 380px; overflow-y: auto;")
             .message-body
-              p.text-center.py-2.mb-0.text-muted Tidak ada notifikasi baru
+              if notifications && notifications.length > 0
+                .px-3.py-2.border-bottom.d-flex.align-items-center.justify-content-between.mb-1
+                  span.fw-semibold.text-dark Notifikasi
+                  span.badge.bg-light-primary.text-primary.rounded-pill= `${notifications.length} Baru`
+                each notif in notifications
+                  a.d-flex.align-items-start.gap-3.dropdown-item.py-2.border-bottom(href=notif.link)
+                    .bg-light-primary.rounded.p-2.d-flex.align-items-center.justify-content-center(style="min-width: 35px; height: 35px;")
+                      i(class=notif.icon + " fs-5")
+                    div.w-100
+                      h6.mb-0.fw-semibold.fs-3.text-dark= notif.title
+                      p.mb-0.fs-2.text-muted.text-wrap(style="line-height: 1.3;")= notif.message
+              else
+                .py-4.text-center
+                  i.ti.ti-bell-off.fs-7.text-muted.mb-2.d-block
+                  p.mb-0.text-muted Tidak ada notifikasi baru
             
         //- 3. (Opsional/Tambahan) Foto Profil & Dropdown Logout
         li.nav-item.dropdown

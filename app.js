@@ -2,7 +2,15 @@ const express = require('express');
 const path = require('path');
 const dotenv = require('dotenv');
 const session = require('express-session');
-const { sequelize } = require('./models');
+const {
+  sequelize,
+  ProcurementDraft,
+  ProcurementItem,
+  Inventory,
+  MaintenanceLog,
+  User
+} = require('./models');
+const { Op } = require('sequelize');
 const routes = require('./routes/index');
 const authRoutes = require('./routes/auth');
 
@@ -55,6 +63,130 @@ app.use(session({
 // Expose session user globally to all Pug templates
 app.use((req, res, next) => {
   res.locals.user = req.session ? req.session.user : null;
+  next();
+});
+
+// Middleware Notifikasi Dinamis Lintas Role
+app.use(async (req, res, next) => {
+  res.locals.notifications = [];
+  
+  if (req.session && req.session.user) {
+    try {
+      const user = req.session.user;
+      const notifications = [];
+
+      // 1. Ketua Program Studi (Kaprodi): Draf yang perlu direview (status: 'Locked')
+      if (user.role === 'Ketua Program Studi') {
+        const pendingDrafts = await ProcurementDraft.findAll({
+          where: { status: 'Locked' },
+          include: [{ model: User, as: 'labHead' }]
+        });
+        for (const draft of pendingDrafts) {
+          notifications.push({
+            id: `draft-review-${draft.id}`,
+            icon: 'ti ti-file-check text-warning',
+            title: 'Review Pengadaan',
+            message: `Draf pengadaan tahun ${draft.year} dari ${draft.labHead ? draft.labHead.name : 'Kalab'} perlu direview.`,
+            link: '/procurement-drafts-history'
+          });
+        }
+      }
+
+      // 2. Kepala Laboratorium (Kalab): Barang inventaris dilaporkan rusak (condition: 'Rusak')
+      if (user.role === 'Kepala Laboratorium') {
+        const damagedInventories = await Inventory.findAll({
+          where: { condition: 'Rusak' },
+          include: [
+            {
+              model: ProcurementItem,
+              as: 'procurementItem',
+              required: true,
+              where: { status: 'Approved' },
+              include: [
+                {
+                  model: ProcurementDraft,
+                  as: 'draft',
+                  required: true,
+                  where: { status: 'Approved' }
+                }
+              ]
+            }
+          ]
+        });
+        for (const inv of damagedInventories) {
+          notifications.push({
+            id: `inv-damaged-${inv.id}`,
+            icon: 'ti ti-alert-triangle text-danger',
+            title: 'Inventaris Rusak',
+            message: `Barang ${inv.name} (${inv.label_number}) dilaporkan rusak dan memerlukan draf penggantian.`,
+            link: '/procurement-drafts'
+          });
+        }
+      }
+
+      // 3. Staf Administrasi: Ada item pengadaan yang disetujui tapi belum diterima/diinput
+      if (user.role === 'Staf Administrasi') {
+        const pendingItems = await ProcurementItem.findAll({
+          where: {
+            status: 'Approved',
+            item_type: { [Op.ne]: 'BHP' }
+          },
+          include: [
+            {
+              model: ProcurementDraft,
+              as: 'draft',
+              where: { status: 'Approved' },
+              required: true
+            }
+          ]
+        });
+        
+        for (const item of pendingItems) {
+          const labeledCount = await Inventory.count({
+            where: { procurement_item_id: item.id }
+          });
+          if (labeledCount < item.quantity) {
+            notifications.push({
+              id: `item-pending-${item.id}`,
+              icon: 'ti ti-qrcode text-info',
+              title: 'Input Inventaris',
+              message: `Item ${item.item_name} (${item.quantity} unit) baru disetujui, belum selesai diinput ke sistem (${labeledCount}/${item.quantity} unit).`,
+              link: '/administration/inventories'
+            });
+          }
+        }
+      }
+
+      // 4. Semua Role: Riwayat pemeliharaan terbaru yang baru diselesaikan (3 hari terakhir)
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const recentLogs = await MaintenanceLog.findAll({
+        where: {
+          date: { [Op.gte]: threeDaysAgo }
+        },
+        include: [
+          { model: Inventory, as: 'inventory' },
+          { model: User, as: 'staffLab' }
+        ],
+        limit: 5,
+        order: [['date', 'DESC']]
+      });
+
+      for (const log of recentLogs) {
+        notifications.push({
+          id: `maintenance-${log.id}`,
+          icon: 'ti ti-tool text-success',
+          title: 'Maintenance Selesai',
+          message: `Pemeliharaan ${log.inventory ? log.inventory.name : 'inventaris'} selesai dikerjakan oleh ${log.staffLab ? log.staffLab.name : 'Staf Lab'}.`,
+          link: `/stafflab/maintenance/${log.id}`
+        });
+      }
+
+      res.locals.notifications = notifications;
+    } catch (err) {
+      console.error('[Notification Middleware Error]:', err);
+    }
+  }
   next();
 });
 
