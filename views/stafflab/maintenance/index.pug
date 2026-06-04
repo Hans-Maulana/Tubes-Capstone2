@@ -38,11 +38,44 @@ block content
             div
               h5.card-title.fw-semibold.mb-0 Riwayat Maintenance Selesai
               p.card-subtitle.mb-0 Hanya menampilkan barang yang sudah selesai di-maintenance beserta detailnya.
-            a.btn.btn-outline-primary.d-flex.align-items-center.gap-2(href="/stafflab/inventories")
-              i.ti.ti-packages.fs-5
-              | Kelola Inventaris
+            if user && user.role === 'Staf Laboratorium'
+              a.btn.btn-outline-primary.d-flex.align-items-center.gap-2(href="/stafflab/inventories")
+                i.ti.ti-packages.fs-5
+                | Kelola Inventaris
 
-          .table-responsive.mt-4
+          //- Form Filter Log Maintenance
+          form.mb-4.pb-3.border-bottom(method="GET" action="/stafflab/maintenance")
+            .row.g-3
+              .col-md-3
+                label.form-label.fw-semibold.fs-2.text-muted Nama Inventaris
+                input.form-control(type="text" name="q" value=selectedQ placeholder="Cari nama barang...")
+              .col-md-2
+                label.form-label.fw-semibold.fs-2.text-muted No Label
+                input.form-control(type="text" name="label" value=selectedLabel placeholder="LAB-INV-...")
+              .col-md-2
+                label.form-label.fw-semibold.fs-2.text-muted Ruangan
+                select.form-select(name="room_id")
+                  option(value="") — Semua Ruangan —
+                  each room in rooms
+                    option(value=room.id selected=(selectedRoomId == room.id))= room.name
+              .col-md-2
+                label.form-label.fw-semibold.fs-2.text-muted Petugas (Staf Lab)
+                select.form-select(name="staff_id")
+                  option(value="") — Semua Petugas —
+                  each staff in staffs
+                    option(value=staff.id selected=(selectedStaffId == staff.id))= staff.name
+              .col-md-2
+                label.form-label.fw-semibold.fs-2.text-muted Tanggal
+                input.form-control(type="date" name="date" value=selectedDate)
+              .col-md-1.d-flex.align-items-end.justify-content-end
+                .d-flex.gap-1
+                  button.btn.btn-primary.px-3(type="submit" title="Filter")
+                    i.ti.ti-filter
+                  a.btn.btn-outline-secondary.px-3(href="/stafflab/maintenance" title="Reset")
+                    i.ti.ti-refresh
+
+          .table-responsive
+
             table.table.align-middle.text-nowrap.mb-0
               thead.text-dark.fs-4
                 tr
@@ -78,7 +111,12 @@ block content
                       td.border-bottom-0
                         p.mb-0.fw-normal.text-wrap(style="max-width: 280px; font-size: 0.9rem;")
                           = log.description ? (log.description.length > 80 ? log.description.substring(0, 80) + '...' : log.description) : '-'
-                        if log.bhpUsed
+                        if log.logBhps && log.logBhps.length > 0
+                          .d-flex.flex-wrap.gap-1.mt-1
+                            each lb in log.logBhps
+                              if lb.bhp
+                                span.badge.bg-light-warning.text-warning= `${lb.bhp.name} (${lb.quantity} ${lb.bhp.unit})`
+                        else if log.bhpUsed
                           span.badge.bg-light-warning.text-warning.mt-1= `${log.bhpUsed.name} (${log.bhp_quantity_used} ${log.bhpUsed.unit})`
                       td.border-bottom-0
                         span.fw-semibold= log.staffLab ? log.staffLab.name : '-'

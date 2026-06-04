@@ -8,12 +8,14 @@ const {
   ProcurementItem,
   ProcurementDraft,
   ItemCategory,
+  MaintenanceLogBhp,
+  Role,
   sequelize
 } = require('../models');
 
 const INVENTORY_CONDITIONS = ['Baik', 'Rusak', 'Maintenance'];
 
-async function findLabeledInventories({ room_id, year, label, category_id, q } = {}) {
+async function findLabeledInventories({ room_id, year, label, category_id, q, condition } = {}) {
   const inventoryWhere = {};
   if (room_id) {
     inventoryWhere.room_id = parseInt(room_id, 10);
@@ -26,6 +28,9 @@ async function findLabeledInventories({ room_id, year, label, category_id, q } =
   }
   if (category_id) {
     inventoryWhere.category_id = parseInt(category_id, 10);
+  }
+  if (condition && condition.trim()) {
+    inventoryWhere.condition = condition.trim();
   }
 
   const draftWhere = { status: 'Approved' };
@@ -86,22 +91,80 @@ exports.getBhps = async (req, res, next) => {
 
 exports.getMaintenanceLogs = async (req, res, next) => {
   try {
+    const { q, label, room_id, staff_id, date } = req.query;
+
+    const where = {};
+    const inventoryWhere = {};
+
+    if (date && date.trim()) {
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+      where.date = {
+        [Op.between]: [startDate, endDate]
+      };
+    }
+
+    if (staff_id) {
+      where.staff_lab_id = parseInt(staff_id, 10);
+    }
+
+    if (room_id) {
+      inventoryWhere.room_id = parseInt(room_id, 10);
+    }
+    if (label && label.trim()) {
+      inventoryWhere.label_number = { [Op.like]: `%${label.trim()}%` };
+    }
+    if (q && q.trim()) {
+      inventoryWhere.name = { [Op.like]: `%${q.trim()}%` };
+    }
+
+    const isInventoryFiltered = Boolean(room_id || (label && label.trim()) || (q && q.trim()));
+
     const logs = await MaintenanceLog.findAll({
+      where,
       include: [
         {
           model: Inventory,
           as: 'inventory',
+          required: isInventoryFiltered,
+          where: isInventoryFiltered ? inventoryWhere : undefined,
           include: [{ model: Room, as: 'room' }]
         },
         { model: User, as: 'staffLab' },
-        { model: Bhp, as: 'bhpUsed' }
+        { model: Bhp, as: 'bhpUsed' },
+        {
+          model: MaintenanceLogBhp,
+          as: 'logBhps',
+          include: [{ model: Bhp, as: 'bhp' }]
+        }
       ],
       order: [['date', 'DESC'], ['id', 'DESC']]
+    });
+
+    const rooms = await Room.findAll({ order: [['name', 'ASC']] });
+    const staffs = await User.findAll({
+      include: [
+        {
+          model: Role,
+          as: 'role',
+          where: { name: 'Staf Laboratorium' }
+        }
+      ],
+      order: [['name', 'ASC']]
     });
 
     res.render('stafflab/maintenance/index', {
       title: 'Log Maintenance - Sistem Inventaris Laboratorium',
       logs,
+      rooms,
+      staffs,
+      selectedQ: q || '',
+      selectedLabel: label || '',
+      selectedRoomId: room_id || '',
+      selectedStaffId: staff_id || '',
+      selectedDate: date || '',
       success: req.session.success || null,
       error: req.session.error || null
     });
@@ -126,7 +189,12 @@ exports.getMaintenanceLogDetail = async (req, res, next) => {
           ]
         },
         { model: User, as: 'staffLab' },
-        { model: Bhp, as: 'bhpUsed' }
+        { model: Bhp, as: 'bhpUsed' },
+        {
+          model: MaintenanceLogBhp,
+          as: 'logBhps',
+          include: [{ model: Bhp, as: 'bhp' }]
+        }
       ]
     });
 
@@ -157,9 +225,9 @@ exports.postCreateMaintenanceLog = async (req, res, next) => {
 
 exports.getInventories = async (req, res, next) => {
   try {
-    const { room_id, year, label, category_id, q } = req.query;
+    const { room_id, year, label, category_id, q, condition } = req.query;
 
-    const inventories = await findLabeledInventories({ room_id, year, label, category_id, q });
+    const inventories = await findLabeledInventories({ room_id, year, label, category_id, q, condition });
 
     const distinctDrafts = await ProcurementDraft.findAll({
       attributes: ['year'],
@@ -177,11 +245,13 @@ exports.getInventories = async (req, res, next) => {
       rooms,
       categories,
       years,
+      conditions: INVENTORY_CONDITIONS,
       selectedRoomId: room_id || '',
       selectedYear: year || '',
       selectedLabel: label || '',
       selectedCategoryId: category_id || '',
       selectedQ: q || '',
+      selectedCondition: condition || '',
       success: req.session.success || null,
       error: req.session.error || null
     });
@@ -345,7 +415,7 @@ exports.getCompleteMaintenance = async (req, res, next) => {
 };
 
 exports.postCompleteMaintenance = async (req, res, next) => {
-  const { description, date, condition, bhp_used_id, bhp_quantity_used } = req.body;
+  const { description, date, condition } = req.body;
 
   try {
     const inventory = await Inventory.findByPk(req.params.id);
@@ -357,18 +427,45 @@ exports.postCompleteMaintenance = async (req, res, next) => {
     const bhps = await Bhp.findAll({ order: [['name', 'ASC']] });
     const allowedConditions = INVENTORY_CONDITIONS.filter((c) => c !== 'Maintenance');
 
-    const renderForm = (error, formData = {}) => res.render('stafflab/inventories/complete-maintenance', {
+    let bhpInputs = [];
+    const rawBhpIds = req.body.bhp_ids;
+    const rawBhpQuantities = req.body.bhp_quantities;
+
+    if (rawBhpIds) {
+      const ids = Array.isArray(rawBhpIds) ? rawBhpIds : [rawBhpIds];
+      const quantities = Array.isArray(rawBhpQuantities) ? rawBhpQuantities : [rawBhpQuantities];
+      
+      for (let i = 0; i < ids.length; i++) {
+        const bhpId = ids[i];
+        const qtyStr = quantities[i];
+        if (bhpId) {
+          const qty = parseInt(qtyStr, 10);
+          bhpInputs.push({
+            bhp_id: parseInt(bhpId, 10),
+            quantity: qty
+          });
+        }
+      }
+    }
+
+    const renderForm = (error) => res.render('stafflab/inventories/complete-maintenance', {
       title: 'Selesaikan Maintenance - Sistem Inventaris Laboratorium',
       inventory,
       bhps,
       conditions: allowedConditions,
       error,
       formData: {
-        date: formData.date || new Date().toISOString().substring(0, 10),
-        condition: formData.condition || 'Baik',
-        description: formData.description || '',
-        bhp_used_id: formData.bhp_used_id || '',
-        bhp_quantity_used: formData.bhp_quantity_used || ''
+        date: date || new Date().toISOString().substring(0, 10),
+        condition: condition || 'Baik',
+        description: description || '',
+        bhpsUsed: bhpInputs.map(input => {
+          const match = bhps.find(b => b.id === input.bhp_id);
+          return {
+            bhp_id: input.bhp_id,
+            quantity: input.quantity,
+            maxStock: match ? match.stock : null
+          };
+        })
       }
     });
 
@@ -378,62 +475,70 @@ exports.postCompleteMaintenance = async (req, res, next) => {
     }
 
     if (!description || !date || !condition) {
-      return renderForm('Deskripsi, tanggal selesai, dan kondisi akhir wajib diisi.', {
-        description, date, condition, bhp_used_id, bhp_quantity_used
-      });
+      return renderForm('Deskripsi, tanggal selesai, dan kondisi akhir wajib diisi.');
     }
 
     if (!allowedConditions.includes(condition)) {
-      return renderForm('Kondisi akhir tidak valid. Pilih Baik atau Rusak.', {
-        description, date, condition, bhp_used_id, bhp_quantity_used
-      });
+      return renderForm('Kondisi akhir tidak valid. Pilih Baik atau Rusak.');
     }
 
-    let parsedBhpUsedId = null;
-    let parsedBhpQuantityUsed = null;
-    let bhp = null;
-
-    if (bhp_used_id) {
-      parsedBhpUsedId = parseInt(bhp_used_id, 10);
-      parsedBhpQuantityUsed = parseInt(bhp_quantity_used, 10);
-
-      if (isNaN(parsedBhpQuantityUsed) || parsedBhpQuantityUsed <= 0) {
-        return renderForm('Jumlah BHP yang digunakan harus lebih besar dari 0.', {
-          description, date, condition, bhp_used_id, bhp_quantity_used
-        });
+    // Consolidate duplicates
+    const consolidated = {};
+    for (const input of bhpInputs) {
+      if (isNaN(input.quantity) || input.quantity <= 0) {
+        return renderForm('Jumlah BHP yang digunakan harus lebih besar dari 0.');
       }
-
-      bhp = await Bhp.findByPk(parsedBhpUsedId);
-      if (!bhp) {
-        return renderForm('BHP yang dipilih tidak ditemukan.', {
-          description, date, condition, bhp_used_id, bhp_quantity_used
-        });
+      if (consolidated[input.bhp_id]) {
+        consolidated[input.bhp_id].quantity += input.quantity;
+      } else {
+        consolidated[input.bhp_id] = { ...input };
       }
+    }
 
-      if (bhp.stock < parsedBhpQuantityUsed) {
-        return renderForm(`Stok BHP "${bhp.name}" tidak mencukupi. Stok saat ini: ${bhp.stock} ${bhp.unit}.`, {
-          description, date, condition, bhp_used_id, bhp_quantity_used
-        });
+    const finalBhpInputs = Object.values(consolidated);
+
+    // Pre-validate stock availability
+    for (const item of finalBhpInputs) {
+      const bhpObj = await Bhp.findByPk(item.bhp_id);
+      if (!bhpObj) {
+        return renderForm('BHP yang dipilih tidak ditemukan.');
+      }
+      if (bhpObj.stock < item.quantity) {
+        return renderForm(`Stok BHP "${bhpObj.name}" tidak mencukupi. Stok saat ini: ${bhpObj.stock} ${bhpObj.unit}.`);
       }
     }
 
     const transaction = await sequelize.transaction();
     try {
-      if (bhp) {
-        await bhp.decrement('stock', { by: parsedBhpQuantityUsed, transaction });
+      // 1. Decrement stock for all used BHPs
+      for (const item of finalBhpInputs) {
+        const bhpObj = await Bhp.findByPk(item.bhp_id, { transaction });
+        await bhpObj.decrement('stock', { by: item.quantity, transaction });
       }
 
+      // 2. Update inventory condition
       await inventory.update({ condition }, { transaction });
 
-      await MaintenanceLog.create({
+      // 3. Create MaintenanceLog (fallback first BHP to legacy columns)
+      const firstBhp = finalBhpInputs[0];
+      const log = await MaintenanceLog.create({
         inventory_id: inventory.id,
         staff_lab_id: req.session.user.id,
         description: description.trim(),
         date: new Date(date),
-        bhp_used_id: parsedBhpUsedId,
-        bhp_quantity_used: parsedBhpQuantityUsed,
+        bhp_used_id: firstBhp ? firstBhp.bhp_id : null,
+        bhp_quantity_used: firstBhp ? firstBhp.quantity : null,
         condition_after: condition
       }, { transaction });
+
+      // 4. Create MaintenanceLogBhp entries
+      for (const item of finalBhpInputs) {
+        await MaintenanceLogBhp.create({
+          maintenance_log_id: log.id,
+          bhp_id: item.bhp_id,
+          quantity: item.quantity
+        }, { transaction });
+      }
 
       await transaction.commit();
 

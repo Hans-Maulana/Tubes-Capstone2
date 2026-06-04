@@ -54,19 +54,48 @@ block content
               textarea.form-control(name="description" rows="4" placeholder="Jelaskan perbaikan yang dilakukan..." required)= formData.description || ''
 
             hr.my-4
-            h6.fw-semibold.mb-3 Penggunaan BHP (Opsional)
-            .row
-              .col-md-6.mb-3
-                label.form-label Pilih BHP
-                select.form-select(name="bhp_used_id")
-                  option(value="" selected=(!formData.bhp_used_id)) -- Tidak Menggunakan BHP --
-                  each bhp in (bhps || [])
-                    option(value=bhp.id selected=(String(formData.bhp_used_id) === String(bhp.id)) data-stock=bhp.stock data-unit=bhp.unit)
-                      = `${bhp.name} (Tersedia: ${bhp.stock} ${bhp.unit})`
-                small#bhp-stock-help.text-primary.fw-semibold.mt-1.d-block
-              .col-md-6.mb-3
-                label.form-label Jumlah BHP Digunakan
-                input.form-control(type="number" name="bhp_quantity_used" min="1" value=formData.bhp_quantity_used placeholder="Jumlah")
+            .d-flex.align-items-center.justify-content-between.mb-3
+              h6.fw-semibold.mb-0 Penggunaan BHP (Opsional)
+              button#add-bhp-row.btn.btn-outline-primary.btn-sm.d-flex.align-items-center.gap-1(type="button")
+                i.ti.ti-plus
+                | Tambah BHP
+
+            #bhp-rows-container.mb-3(data-bhps=JSON.stringify(bhps))
+              if formData.bhpsUsed && formData.bhpsUsed.length > 0
+                each selectedBhp, idx in formData.bhpsUsed
+                  .row.bhp-row.mb-3
+                    .col-md-5
+                      label.form-label Pilih BHP
+                      select.form-select.bhp-select(name="bhp_ids[]")
+                        option(value="") -- Pilih BHP --
+                        each bhp in (bhps || [])
+                          option(value=bhp.id selected=(String(selectedBhp.bhp_id) === String(bhp.id)) data-stock=bhp.stock data-unit=bhp.unit)
+                            = `${bhp.name} (Tersedia: ${bhp.stock} ${bhp.unit})`
+                      small.bhp-stock-help.text-primary.fw-semibold.mt-1.d-block
+                    .col-md-5
+                      label.form-label Jumlah BHP Digunakan
+                      input.form-control.bhp-qty(type="number" name="bhp_quantities[]" min="1" max=selectedBhp.maxStock value=selectedBhp.quantity placeholder="Jumlah")
+                    .col-md-2
+                      label.form-label.d-none.d-md-block &nbsp;
+                      button.btn.btn-outline-danger.remove-bhp-row.w-100(type="button" style=`display: ${formData.bhpsUsed.length > 1 ? 'block' : 'none'}; height: 38px;`)
+                        i.ti.ti-trash
+              else
+                .row.bhp-row.mb-3
+                  .col-md-5
+                    label.form-label Pilih BHP
+                    select.form-select.bhp-select(name="bhp_ids[]")
+                      option(value="") -- Pilih BHP --
+                      each bhp in (bhps || [])
+                        option(value=bhp.id data-stock=bhp.stock data-unit=bhp.unit)
+                          = `${bhp.name} (Tersedia: ${bhp.stock} ${bhp.unit})`
+                    small.bhp-stock-help.text-primary.fw-semibold.mt-1.d-block
+                  .col-md-5
+                    label.form-label Jumlah BHP Digunakan
+                    input.form-control.bhp-qty(type="number" name="bhp_quantities[]" min="1" placeholder="Jumlah" disabled)
+                  .col-md-2
+                    label.form-label.d-none.d-md-block &nbsp;
+                    button.btn.btn-outline-danger.remove-bhp-row.w-100(type="button" style="display: none; height: 38px;")
+                      i.ti.ti-trash
 
             .d-flex.gap-2.mt-2
               button.btn.btn-success(type="submit")
@@ -77,17 +106,21 @@ block content
 block scripts
   script.
     document.addEventListener('DOMContentLoaded', function () {
-      const bhpSelect = document.querySelector('select[name="bhp_used_id"]');
-      const qtyInput = document.querySelector('input[name="bhp_quantity_used"]');
-      const stockHelp = document.getElementById('bhp-stock-help');
+      const container = document.getElementById('bhp-rows-container');
+      const addBtn = document.getElementById('add-bhp-row');
+      const bhps = JSON.parse(container.getAttribute('data-bhps') || '[]');
 
-      function updateBhpFields() {
-        if (!bhpSelect || !qtyInput) return;
-        const selectedOption = bhpSelect.options[bhpSelect.selectedIndex];
-        const stock = selectedOption.getAttribute('data-stock');
-        const unit = selectedOption.getAttribute('data-unit');
+      function updateRowState(row) {
+        const select = row.querySelector('.bhp-select');
+        const qtyInput = row.querySelector('.bhp-qty');
+        const stockHelp = row.querySelector('.bhp-stock-help');
 
-        if (stock !== null && bhpSelect.value !== '') {
+        if (!select || !qtyInput) return;
+        const selectedOption = select.options[select.selectedIndex];
+        const stock = selectedOption ? selectedOption.getAttribute('data-stock') : null;
+        const unit = selectedOption ? selectedOption.getAttribute('data-unit') : null;
+
+        if (stock !== null && select.value !== '') {
           stockHelp.textContent = `Stok tersedia: ${stock} ${unit}`;
           qtyInput.removeAttribute('disabled');
           qtyInput.setAttribute('required', 'required');
@@ -100,8 +133,70 @@ block scripts
         }
       }
 
-      if (bhpSelect) {
-        bhpSelect.addEventListener('change', updateBhpFields);
-        updateBhpFields();
+      function attachEvents(row) {
+        const select = row.querySelector('.bhp-select');
+        select.addEventListener('change', () => updateRowState(row));
+
+        const removeBtn = row.querySelector('.remove-bhp-row');
+        removeBtn.addEventListener('click', () => {
+          row.remove();
+          updateRemoveButtons();
+        });
+      }
+
+      function updateRemoveButtons() {
+        const rows = container.querySelectorAll('.bhp-row');
+        rows.forEach((row) => {
+          const removeBtn = row.querySelector('.remove-bhp-row');
+          if (rows.length > 1) {
+            removeBtn.style.display = 'block';
+          } else {
+            removeBtn.style.display = 'none';
+          }
+        });
+      }
+
+      // Initial row setup
+      const initialRows = container.querySelectorAll('.bhp-row');
+      initialRows.forEach(row => {
+        attachEvents(row);
+        updateRowState(row);
+      });
+      updateRemoveButtons();
+
+      if (addBtn) {
+        addBtn.addEventListener('click', function () {
+          const newRow = document.createElement('div');
+          newRow.className = 'row bhp-row mb-3';
+          
+          let optionsHtml = '<option value="">-- Pilih BHP --</option>';
+          bhps.forEach(bhp => {
+            optionsHtml += `<option value="${bhp.id}" data-stock="${bhp.stock}" data-unit="${bhp.unit}">${bhp.name} (Tersedia: ${bhp.stock} ${bhp.unit})</option>`;
+          });
+
+          newRow.innerHTML = `
+            <div class="col-md-5">
+              <label class="form-label">Pilih BHP</label>
+              <select class="form-select bhp-select" name="bhp_ids[]">
+                ${optionsHtml}
+              </select>
+              <small class="bhp-stock-help text-primary fw-semibold mt-1 d-block"></small>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Jumlah BHP Digunakan</label>
+              <input class="form-control bhp-qty" type="number" name="bhp_quantities[]" min="1" placeholder="Jumlah" disabled>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label d-none d-md-block">&nbsp;</label>
+              <button class="btn btn-outline-danger remove-bhp-row w-100" type="button" style="height: 38px;">
+                <i class="ti ti-trash"></i>
+              </button>
+            </div>
+          `;
+
+          container.appendChild(newRow);
+          attachEvents(newRow);
+          updateRemoveButtons();
+        });
       }
     });

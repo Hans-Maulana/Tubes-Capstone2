@@ -385,6 +385,11 @@ exports.postDeleteProcurementItem = async (req, res, next) => {
       return res.redirect('/administration/procurement-items');
     }
 
+    // Hapus data replacement targets terkait terlebih dahulu untuk menghindari error foreign key constraint
+    await ProcurementItemReplacement.destroy({
+      where: { procurement_item_id: item.id }
+    });
+
     await item.destroy();
     req.session.success = 'Item pengadaan berhasil dihapus.';
     return res.redirect('/administration/procurement-items');
@@ -849,7 +854,7 @@ exports.getEditInventory = async (req, res, next) => {
 };
 
 exports.postUpdateInventory = async (req, res, next) => {
-  const { label_number, condition, room_id, category_id } = req.body;
+  const { label_number, condition, room_id, category_id, action } = req.body;
 
   try {
     const inventory = await Inventory.findByPk(req.params.id, {
@@ -857,7 +862,8 @@ exports.postUpdateInventory = async (req, res, next) => {
         {
           model: ProcurementItem,
           as: 'procurementItem',
-          where: { item_type: { [Op.ne]: 'BHP' } }
+          where: { item_type: { [Op.ne]: 'BHP' } },
+          include: [{ model: ProcurementDraft, as: 'draft' }]
         }
       ]
     });
@@ -887,10 +893,6 @@ exports.postUpdateInventory = async (req, res, next) => {
       error
     });
 
-    if (!label_number) {
-      return renderEditForm('Nomor label wajib diisi.');
-    }
-
     if (!parsedCategoryId) {
       return renderEditForm('Kategori barang wajib dipilih.');
     }
@@ -913,17 +915,28 @@ exports.postUpdateInventory = async (req, res, next) => {
       return renderEditForm('Kategori barang tidak ditemukan.');
     }
 
-    if (label_number !== inventory.label_number) {
-      const existingInventory = await Inventory.findOne({ where: { label_number } });
-      if (existingInventory) {
-        return renderEditForm('Nomor label sudah digunakan pada inventaris lain.');
+    let finalLabelNumber = label_number;
+    let qrImagePath = inventory.qr_image_path;
+
+    if (action === 'regenerate') {
+      const draftYear = inventory.procurementItem?.draft?.year || new Date().getFullYear();
+      finalLabelNumber = await generateNextLabelNumber(draftYear);
+      qrImagePath = await generateQrDataUrl(req, finalLabelNumber);
+    } else {
+      if (!finalLabelNumber) {
+        return renderEditForm('Nomor label wajib diisi.');
+      }
+      if (finalLabelNumber !== inventory.label_number) {
+        const existingInventory = await Inventory.findOne({ where: { label_number: finalLabelNumber } });
+        if (existingInventory) {
+          return renderEditForm('Nomor label sudah digunakan pada inventaris lain.');
+        }
+        qrImagePath = await generateQrDataUrl(req, finalLabelNumber);
       }
     }
 
-    const qrImagePath = await generateQrDataUrl(req, label_number);
-
     await inventory.update({
-      label_number,
+      label_number: finalLabelNumber,
       qr_image_path: qrImagePath,
       condition: normalizedCondition,
       room_id: parsedRoomId,
@@ -931,7 +944,11 @@ exports.postUpdateInventory = async (req, res, next) => {
       category: itemCategory.name
     });
 
-    req.session.success = 'Nomor label dan QR code berhasil diperbarui.';
+    if (action === 'regenerate') {
+      req.session.success = `Nomor label berhasil di-regenerate menjadi "${finalLabelNumber}" dan QR code diperbarui.`;
+    } else {
+      req.session.success = 'Data inventaris berhasil diperbarui.';
+    }
     return res.redirect('/administration/inventories');
   } catch (error) {
     next(error);

@@ -64,7 +64,7 @@ block content
                 label.form-label(for="purchase_link") Link Pembelian
                 input#purchase_link.form-control(type="url" name="purchase_link" placeholder="https://..." value=item.purchase_link || '')
               .col-12.mb-3#replacement_section(style=(item.item_type === 'BHP' ? 'display: none;' : ''))
-                label.form-label Pengganti Inventaris Rusak / Maintenance
+                label.form-label Pengganti Inventaris Rusak
                 - const selectedReplacementIds = (item.replacementTargets || []).map((t) => String(t.inventory_id))
                 - if (item.replacement_inventory_id && !selectedReplacementIds.includes(String(item.replacement_inventory_id)))
                   - selectedReplacementIds.push(String(item.replacement_inventory_id))

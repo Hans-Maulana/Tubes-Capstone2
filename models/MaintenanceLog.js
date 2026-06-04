@@ -57,6 +57,7 @@ module.exports = MaintenanceLog;
 const Inventory = require('./Inventory');
 const User = require('./User');
 const Bhp = require('./Bhp');
+const MaintenanceLogBhp = require('./MaintenanceLogBhp');
 
 MaintenanceLog.belongsTo(Inventory, { foreignKey: 'inventory_id', as: 'inventory' });
 Inventory.hasMany(MaintenanceLog, { foreignKey: 'inventory_id', as: 'maintenanceLogs' });
@@ -65,3 +66,10 @@ MaintenanceLog.belongsTo(User, { foreignKey: 'staff_lab_id', as: 'staffLab' });
 
 MaintenanceLog.belongsTo(Bhp, { foreignKey: 'bhp_used_id', as: 'bhpUsed' });
 Bhp.hasMany(MaintenanceLog, { foreignKey: 'bhp_used_id', as: 'maintenanceLogs' });
+
+MaintenanceLog.hasMany(MaintenanceLogBhp, { foreignKey: 'maintenance_log_id', as: 'logBhps' });
+MaintenanceLogBhp.belongsTo(MaintenanceLog, { foreignKey: 'maintenance_log_id', as: 'maintenanceLog' });
+
+MaintenanceLogBhp.belongsTo(Bhp, { foreignKey: 'bhp_id', as: 'bhp' });
+Bhp.hasMany(MaintenanceLogBhp, { foreignKey: 'bhp_id', as: 'logBhps' });
+

@@ -124,6 +124,11 @@ exports.getDashboardStats = async (req, res, next) => {
  */
 exports.getDashboard = async (req, res, next) => {
   try {
+    const success = req.session.success || null;
+    const error = req.session.error || null;
+    req.session.success = null;
+    req.session.error = null;
+
     if (req.session.user.role === 'Administrator') {
       const totalUsers = await User.count();
       const totalRooms = await Room.count();
@@ -145,7 +150,9 @@ exports.getDashboard = async (req, res, next) => {
           totalInventories,
           totalBhps
         },
-        recentUsers
+        recentUsers,
+        success,
+        error
       });
     }
 
@@ -171,6 +178,14 @@ exports.getDashboard = async (req, res, next) => {
         limit: 5
       });
 
+      const distinctYears = await ProcurementDraft.findAll({
+        attributes: ['year'],
+        where: { lab_head_id: req.session.user.id },
+        group: ['year'],
+        order: [['year', 'DESC']]
+      });
+      const availableYears = distinctYears.map(d => d.year);
+
       return res.render('dashboard/index', {
         title: 'Dashboard Kepala Laboratorium - Sistem Inventaris Laboratorium',
         labHeadDashboard: true,
@@ -180,7 +195,10 @@ exports.getDashboard = async (req, res, next) => {
           totalInventories,
           totalBhps
         },
-        myDrafts
+        myDrafts,
+        availableYears,
+        success,
+        error
       });
     }
 
@@ -206,6 +224,14 @@ exports.getDashboard = async (req, res, next) => {
         limit: 5
       });
 
+      const distinctYears = await ProcurementDraft.findAll({
+        attributes: ['year'],
+        where: { status: { [Op.in]: ['Submitted', 'Locked', 'Approved', 'Rejected'] } },
+        group: ['year'],
+        order: [['year', 'DESC']]
+      });
+      const availableYears = distinctYears.map(d => d.year);
+
       return res.render('dashboard/index', {
         title: 'Dashboard Ketua Program Studi - Sistem Inventaris Laboratorium',
         kaprodiDashboard: true,
@@ -215,7 +241,10 @@ exports.getDashboard = async (req, res, next) => {
           totalInventories,
           totalBhps
         },
-        recentSubmittedDrafts
+        recentSubmittedDrafts,
+        availableYears,
+        success,
+        error
       });
     }
 
@@ -252,7 +281,9 @@ exports.getDashboard = async (req, res, next) => {
           totalLogs
         },
         recentLogs,
-        lowStockBhps
+        lowStockBhps,
+        success,
+        error
       });
     }
 
@@ -281,6 +312,14 @@ exports.getDashboard = async (req, res, next) => {
       const totalReceived = approvedItems.reduce((total, item) => total + getReceivedTotal(item), 0);
       const totalLabeled = approvedItems.reduce((total, item) => total + getLabeledTotal(item), 0);
 
+      const distinctYears = await ProcurementDraft.findAll({
+        attributes: ['year'],
+        where: { status: 'Approved' },
+        group: ['year'],
+        order: [['year', 'DESC']]
+      });
+      const availableYears = distinctYears.map(d => d.year);
+
       return res.render('dashboard/index', {
         title: 'Dashboard Staf Administrasi - Sistem Inventaris Laboratorium',
         adminDashboard: true,
@@ -306,7 +345,10 @@ exports.getDashboard = async (req, res, next) => {
             labeled
           };
         }),
-        totalRequested
+        totalRequested,
+        availableYears,
+        success,
+        error
       });
     }
 
@@ -336,7 +378,9 @@ exports.getDashboard = async (req, res, next) => {
         category: inv.category,
         room_name: inv.room ? inv.room.name : null,
         condition: inv.condition
-      }))
+      })),
+      success,
+      error
     });
   } catch (error) {
     next(error);

@@ -38,7 +38,7 @@ block content
             .mb-3
               label.form-label QR Saat Ini
               img.rounded.border.d-block(src=inventory.qr_image_path alt=`QR ${inventory.label_number}` style="width: 96px; height: 96px; object-fit: cover;")
-          form(action=`/administration/inventories/${inventory.id}/edit` method="POST" data-confirm-message="Simpan perubahan dan regenerate QR code?")
+          form(action=`/administration/inventories/${inventory.id}/edit` method="POST" data-confirm-message="Simpan perubahan data inventaris?")
             .row
               .col-md-6.mb-3
                 label.form-label Kategori Barang
@@ -67,7 +67,32 @@ block content
               label.form-label Nomor Label
               input.form-control(type="text" name="label_number" value=inventory.label_number required)
             .d-flex.gap-2
-              button.btn.btn-primary(type="submit")
+              button.btn.btn-primary(type="submit" name="action" value="save")
                 i.ti.ti-device-floppy.me-1
-                | Simpan & Regenerate QR
+                | Simpan
+              button.btn.btn-warning(type="submit" name="action" value="regenerate")
+                i.ti.ti-refresh.me-1
+                | Regenerate Label
               a.btn.btn-outline-secondary(href="/administration/inventories") Batal
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.querySelector('form[action$="/edit"]');
+      if (!form) return;
+      
+      const saveBtn = form.querySelector('button[value="save"]');
+      const regenBtn = form.querySelector('button[value="regenerate"]');
+      
+      if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+          form.setAttribute('data-confirm-message', 'Simpan perubahan data inventaris?');
+        });
+      }
+      
+      if (regenBtn) {
+        regenBtn.addEventListener('click', function() {
+          form.setAttribute('data-confirm-message', 'Apakah Anda yakin ingin me-regenerate nomor label? Nomor label dan QR Code lama akan diganti.');
+        });
+      }
+    });

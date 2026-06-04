@@ -9,6 +9,16 @@ const authRoutes = require('./routes/auth');
 // Load environment variables
 dotenv.config();
 
+// Run pending database migrations
+const { execSync } = require('child_process');
+try {
+  console.log('[Startup] Menjalankan migrasi database pending...');
+  const output = execSync('node database/migrate.js', { encoding: 'utf-8' });
+  console.log('[Startup] Hasil migrasi:', output);
+} catch (error) {
+  console.error('[Startup] Gagal menjalankan migrasi:', error.message);
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -63,12 +73,15 @@ app.get('/debug-db-status', async (req, res) => {
       if (modelName === 'sequelize') continue;
       try {
         data.counts[modelName] = await models[modelName].count();
-        if (modelName === 'Room') {
-          data.rooms = await models.Room.findAll();
-        }
       } catch (err) {
         data.counts[modelName] = `Error: ${err.message}`;
       }
+    }
+    try {
+      const [drafts] = await sequelize.query('SELECT * FROM procurement_drafts');
+      data.drafts = drafts;
+    } catch (err) {
+      data.draftsError = err.message;
     }
     res.json(data);
   } catch (err) {
@@ -122,6 +135,8 @@ async function bootServer() {
     console.log('🔄 Checking database connection using Sequelize...');
     await sequelize.authenticate();
     console.log('✅ Database connection successfully established!');
+    await sequelize.sync();
+    console.log('✅ Database tables synced.');
     console.log('DB Config in app.js:', {
       database: sequelize.config.database,
       username: sequelize.config.username,

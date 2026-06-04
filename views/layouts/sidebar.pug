@@ -29,6 +29,14 @@ aside.left-sidebar
             a.sidebar-link(href="/inventories" aria-expanded="false")
               i.ti.ti-packages
               span.hide-menu Daftar Inventaris
+          li.sidebar-item
+            a.sidebar-link(href="/stafflab/bhps" aria-expanded="false")
+              i.ti.ti-archive
+              span.hide-menu Stok BHP
+          li.sidebar-item
+            a.sidebar-link(href="/stafflab/maintenance" aria-expanded="false")
+              i.ti.ti-tool
+              span.hide-menu Log Maintenance
 
         if user && user.role === 'Kepala Laboratorium'
           li.nav-small-cap
@@ -74,14 +82,6 @@ aside.left-sidebar
           li.nav-small-cap
             iconify-icon.nav-small-cap-icon.fs-4(icon="solar:menu-dots-linear")
             span.hide-menu Laboratorium
-          li.sidebar-item
-            a.sidebar-link(href="/stafflab/bhps" aria-expanded="false")
-              i.ti.ti-archive
-              span.hide-menu Stok BHP
-          li.sidebar-item
-            a.sidebar-link(href="/stafflab/maintenance" aria-expanded="false")
-              i.ti.ti-tool
-              span.hide-menu Log Maintenance
           li.sidebar-item
             a.sidebar-link(href="/stafflab/inventories" aria-expanded="false")
               i.ti.ti-edit

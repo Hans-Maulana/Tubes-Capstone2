@@ -55,11 +55,23 @@ function itemStatusLabel(status) {
 exports.getLabHeadReportPdf = async (req, res, next) => {
   try {
     const user = req.session.user;
+    const { year } = req.query;
+    if (!year) {
+      req.session.error = 'Tahun laporan wajib ditentukan.';
+      return res.redirect('/dashboard');
+    }
+
+    const parsedYear = parseInt(year, 10);
     const drafts = await ProcurementDraft.findAll({
-      where: { lab_head_id: user.id },
+      where: { lab_head_id: user.id, year: parsedYear },
       include: [{ model: ProcurementItem, as: 'items' }],
       order: [['year', 'DESC'], ['id', 'DESC']]
     });
+
+    if (drafts.length === 0) {
+      req.session.error = `Tidak ada draf pengadaan untuk tahun ${year}.`;
+      return res.redirect('/dashboard');
+    }
 
     const statusCounts = {};
     let totalItems = 0;
@@ -99,10 +111,10 @@ exports.getLabHeadReportPdf = async (req, res, next) => {
       });
     });
 
-    streamPdf(res, pdfFilename('laporan-kepala-lab'), (doc) => {
+    streamPdf(res, pdfFilename(`laporan-kepala-lab-${year}`), (doc) => {
       drawHeader(doc, {
         title: 'Laporan Pengadaan Laboratorium',
-        subtitle: 'Kepala Laboratorium — Ringkasan Draf & Item Pengadaan',
+        subtitle: `Kepala Laboratorium — Ringkasan Draf & Item Pengadaan (${year})`,
         generatedBy: `${user.name} (${user.role})`
       });
 
@@ -149,8 +161,16 @@ exports.getLabHeadReportPdf = async (req, res, next) => {
 exports.getKaprodiReportPdf = async (req, res, next) => {
   try {
     const user = req.session.user;
+    const { year } = req.query;
+    if (!year) {
+      req.session.error = 'Tahun laporan wajib ditentukan.';
+      return res.redirect('/dashboard');
+    }
+
+    const parsedYear = parseInt(year, 10);
     const drafts = await ProcurementDraft.findAll({
       where: {
+        year: parsedYear,
         status: { [Op.in]: ['Submitted', 'Locked', 'Approved', 'Rejected'] }
       },
       include: [
@@ -159,6 +179,11 @@ exports.getKaprodiReportPdf = async (req, res, next) => {
       ],
       order: [['year', 'DESC'], ['id', 'DESC']]
     });
+
+    if (drafts.length === 0) {
+      req.session.error = `Tidak ada draf pengadaan untuk tahun ${year}.`;
+      return res.redirect('/dashboard');
+    }
 
     const pending = drafts.filter((d) => ['Submitted', 'Locked'].includes(d.status)).length;
     const approved = drafts.filter((d) => d.status === 'Approved').length;
@@ -190,10 +215,10 @@ exports.getKaprodiReportPdf = async (req, res, next) => {
     const totalInventories = await Inventory.count();
     const totalBhps = await Bhp.count();
 
-    streamPdf(res, pdfFilename('laporan-kaprodi'), (doc) => {
+    streamPdf(res, pdfFilename(`laporan-kaprodi-${year}`), (doc) => {
       drawHeader(doc, {
         title: 'Laporan Validasi Pengadaan',
-        subtitle: 'Ketua Program Studi — Status Review & Persetujuan Item',
+        subtitle: `Ketua Program Studi — Status Review & Persetujuan Item (${year})`,
         generatedBy: `${user.name} (${user.role})`
       });
 
@@ -238,8 +263,15 @@ exports.getKaprodiReportPdf = async (req, res, next) => {
 exports.getAdminStaffReportPdf = async (req, res, next) => {
   try {
     const user = req.session.user;
+    const { year } = req.query;
+    if (!year) {
+      req.session.error = 'Tahun laporan wajib ditentukan.';
+      return res.redirect('/dashboard');
+    }
+
+    const parsedYear = parseInt(year, 10);
     const approvedDrafts = await ProcurementDraft.findAll({
-      where: { status: 'Approved' },
+      where: { status: 'Approved', year: parsedYear },
       include: [
         { model: User, as: 'labHead' },
         {
@@ -255,6 +287,11 @@ exports.getAdminStaffReportPdf = async (req, res, next) => {
       ],
       order: [['year', 'DESC'], ['id', 'DESC']]
     });
+
+    if (approvedDrafts.length === 0) {
+      req.session.error = `Tidak ada draf pengadaan disetujui untuk tahun ${year}.`;
+      return res.redirect('/dashboard');
+    }
 
     const approvedItems = approvedDrafts.flatMap((draft) => draft.items || []);
     const totalRequested = approvedItems.reduce(
@@ -301,10 +338,10 @@ exports.getAdminStaffReportPdf = async (req, res, next) => {
     const inventoryCount = await Inventory.count();
     const bhpCount = await Bhp.count();
 
-    streamPdf(res, pdfFilename('laporan-staf-admin'), (doc) => {
+    streamPdf(res, pdfFilename(`laporan-staf-admin-${year}`), (doc) => {
       drawHeader(doc, {
         title: 'Laporan Administrasi Pengadaan',
-        subtitle: 'Staf Administrasi — Penerimaan Barang & Input Inventaris',
+        subtitle: `Staf Administrasi — Penerimaan Barang & Input Inventaris (${year})`,
         generatedBy: `${user.name} (${user.role})`
       });
 

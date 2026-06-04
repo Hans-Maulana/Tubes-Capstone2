@@ -43,11 +43,28 @@ async function findOwnedDraft(id, userId) {
 async function getDamagedInventories() {
   return Inventory.findAll({
     where: {
-      condition: {
-        [Op.in]: ['Rusak', 'Maintenance']
-      }
+      condition: 'Rusak'
     },
-    include: [{ model: ItemCategory, as: 'itemCategory', required: false }],
+    include: [
+      { model: ItemCategory, as: 'itemCategory', required: false },
+      {
+        model: ProcurementItem,
+        as: 'procurementItem',
+        required: true,
+        where: {
+          item_type: { [Op.ne]: 'BHP' },
+          status: 'Approved'
+        },
+        include: [
+          {
+            model: ProcurementDraft,
+            as: 'draft',
+            required: true,
+            where: { status: 'Approved' }
+          }
+        ]
+      }
+    ],
     order: [['label_number', 'ASC']]
   });
 }
@@ -120,12 +137,31 @@ async function syncItemReplacements(item, inventoryIds, reason) {
     const inventories = await Inventory.findAll({
       where: {
         id: uniqueIds,
-        condition: { [Op.in]: ['Rusak', 'Maintenance'] }
-      }
+        condition: 'Rusak'
+      },
+      include: [
+        {
+          model: ProcurementItem,
+          as: 'procurementItem',
+          required: true,
+          where: {
+            item_type: { [Op.ne]: 'BHP' },
+            status: 'Approved'
+          },
+          include: [
+            {
+              model: ProcurementDraft,
+              as: 'draft',
+              required: true,
+              where: { status: 'Approved' }
+            }
+          ]
+        }
+      ]
     });
 
     if (inventories.length !== uniqueIds.length) {
-      return { error: 'Salah satu inventaris pengganti tidak valid atau bukan status Rusak/Maintenance.' };
+      return { error: 'Salah satu inventaris pengganti tidak valid atau bukan status Rusak.' };
     }
   }
 
@@ -486,6 +522,11 @@ exports.postDeleteItem = async (req, res, next) => {
       req.session.error = 'Item pengadaan tidak ditemukan.';
       return res.redirect(`/procurement-drafts/${draft.id}`);
     }
+
+    // Hapus data replacement targets terkait terlebih dahulu untuk menghindari error foreign key constraint
+    await ProcurementItemReplacement.destroy({
+      where: { procurement_item_id: item.id }
+    });
 
     await item.destroy();
     req.session.success = 'Item pengadaan berhasil dihapus.';

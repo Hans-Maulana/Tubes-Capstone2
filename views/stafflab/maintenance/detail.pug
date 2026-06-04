@@ -64,7 +64,13 @@ block content
               h6.fw-semibold.mb-0= log.staffLab ? log.staffLab.name : '-'
             .col-md-6.mb-3
               p.text-muted.mb-1 BHP Digunakan
-              if log.bhpUsed
+              if log.logBhps && log.logBhps.length > 0
+                ul.list-unstyled.mb-0
+                  each lb in log.logBhps
+                    if lb.bhp
+                      li
+                        h6.fw-semibold.mb-1= `${lb.bhp.name} — ${lb.quantity} ${lb.bhp.unit}`
+              else if log.bhpUsed
                 h6.fw-semibold.mb-0= `${log.bhpUsed.name} — ${log.bhp_quantity_used} ${log.bhpUsed.unit}`
               else
                 h6.fw-semibold.mb-0.text-muted Tidak menggunakan BHP

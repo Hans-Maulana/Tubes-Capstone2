@@ -32,6 +32,6 @@ module.exports = ProcurementItemReplacement;
 const ProcurementItem = require('./ProcurementItem');
 const Inventory = require('./Inventory');
 
-ProcurementItemReplacement.belongsTo(ProcurementItem, { foreignKey: 'procurement_item_id', as: 'procurementItem' });
-ProcurementItemReplacement.belongsTo(Inventory, { foreignKey: 'inventory_id', as: 'inventory' });
-ProcurementItem.hasMany(ProcurementItemReplacement, { foreignKey: 'procurement_item_id', as: 'replacementTargets' });
+ProcurementItemReplacement.belongsTo(ProcurementItem, { foreignKey: 'procurement_item_id', as: 'procurementItem', onDelete: 'CASCADE' });
+ProcurementItemReplacement.belongsTo(Inventory, { foreignKey: 'inventory_id', as: 'inventory', onDelete: 'CASCADE' });
+ProcurementItem.hasMany(ProcurementItemReplacement, { foreignKey: 'procurement_item_id', as: 'replacementTargets', onDelete: 'CASCADE' });

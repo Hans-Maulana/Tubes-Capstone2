@@ -89,12 +89,12 @@ router.post('/administration/categories/:id/edit', authCheck, adminStaffCheck, c
 router.post('/administration/categories/:id/delete', authCheck, adminStaffCheck, categoryController.postDeleteCategory);
 
 // --- Staff Laboratorium Routes ---
-router.get('/stafflab/bhps', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getBhps);
+router.get('/stafflab/bhps', authCheck, staffLabController.getBhps);
 
-router.get('/stafflab/maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getMaintenanceLogs);
+router.get('/stafflab/maintenance', authCheck, staffLabController.getMaintenanceLogs);
 router.get('/stafflab/maintenance/create', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getCreateMaintenanceLog);
 router.post('/stafflab/maintenance', authCheck, roleCheck('Staf Laboratorium'), staffLabController.postCreateMaintenanceLog);
-router.get('/stafflab/maintenance/:id', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getMaintenanceLogDetail);
+router.get('/stafflab/maintenance/:id', authCheck, staffLabController.getMaintenanceLogDetail);
 
 router.get('/stafflab/inventories', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getInventories);
 router.get('/stafflab/inventories/scan', authCheck, roleCheck('Staf Laboratorium'), staffLabController.getScanInventory);
