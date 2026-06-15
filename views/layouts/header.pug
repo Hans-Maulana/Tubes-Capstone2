@@ -22,18 +22,23 @@ header.app-header
         li.nav-item.dropdown
           a#drop1.nav-link.nav-icon-hover(href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false")
             i.ti.ti-bell.fs-6
-            if notifications && notifications.length > 0
+            if unreadNotificationCount && unreadNotificationCount > 0
               .notification.bg-primary.rounded-circle
           .dropdown-menu.dropdown-menu-end.dropdown-menu-animate-up(aria-labelledby="drop1" style="min-width: 320px; max-height: 380px; overflow-y: auto;")
             .message-body
               if notifications && notifications.length > 0
                 .px-3.py-2.border-bottom.d-flex.align-items-center.justify-content-between.mb-1
                   span.fw-semibold.text-dark Notifikasi
-                  span.badge.bg-light-primary.text-primary.rounded-pill= `${notifications.length} Baru`
+                  .d-flex.align-items-center.gap-2
+                    span.badge.bg-light-primary.text-primary.rounded-pill= `${unreadNotificationCount || notifications.length} Baru`
+                    if unreadNotificationCount > 0
+                      form.d-inline(action="/notifications/read-all" method="POST")
+                        input(type="hidden" name="_csrf" value=csrfToken)
+                        button.btn.btn-link.btn-sm.p-0.text-primary(type="submit" style="font-size: 11px;") Tandai dibaca
                 each notif in notifications
-                  a.d-flex.align-items-start.gap-3.dropdown-item.py-2.border-bottom(href=notif.link)
+                  a.d-flex.align-items-start.gap-3.dropdown-item.py-2.border-bottom(href=`/notifications/${notif.id}/open`)
                     .bg-light-primary.rounded.p-2.d-flex.align-items-center.justify-content-center(style="min-width: 35px; height: 35px;")
-                      i(class=notif.icon + " fs-5")
+                      i(class=(notif.icon || 'ti ti-bell text-primary') + " fs-5")
                     div.w-100
                       h6.mb-0.fw-semibold.fs-3.text-dark= notif.title
                       p.mb-0.fs-2.text-muted.text-wrap(style="line-height: 1.3;")= notif.message
@@ -52,4 +57,6 @@ header.app-header
                 .px-3.py-2.border-bottom.mb-2
                   span.d-block.fw-bold= user.name
                   span.d-block.text-muted.small(style="font-size: 11px;")= user.email
-              a.btn.btn-outline-primary.mx-3.mt-2.d-block(href="/auth/logout") Keluar (Logout)
+              form(action="/auth/logout" method="POST")
+                input(type="hidden" name="_csrf" value=csrfToken)
+                button.btn.btn-outline-primary.mx-3.mt-2.d-block.w-auto(type="submit") Keluar (Logout)

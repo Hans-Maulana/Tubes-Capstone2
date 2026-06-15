@@ -86,8 +86,9 @@ async function getDashboardStatsForUser(user) {
     });
 
     const approvedItems = approvedDrafts.flatMap(draft => draft.items || []);
-    const totalReceived = approvedItems.reduce((total, item) => total + getReceivedTotal(item), 0);
-    const totalLabeled = approvedItems.reduce((total, item) => total + getLabeledTotal(item), 0);
+    const inventarisItems = approvedItems.filter((item) => item.item_type !== 'BHP');
+    const totalReceived = inventarisItems.reduce((total, item) => total + getReceivedTotal(item), 0);
+    const totalLabeled = inventarisItems.reduce((total, item) => total + getLabeledTotal(item), 0);
 
     return {
       approvedDrafts: approvedDrafts.length,
@@ -307,10 +308,12 @@ exports.getDashboard = async (req, res, next) => {
       });
 
       const approvedItems = approvedDrafts.flatMap(draft => draft.items || []);
+      const inventarisItems = approvedItems.filter((item) => item.item_type !== 'BHP');
       const totalApprovedItems = approvedItems.length;
       const totalRequested = approvedItems.reduce((total, item) => total + Number(item.quantity || 0), 0);
       const totalReceived = approvedItems.reduce((total, item) => total + getReceivedTotal(item), 0);
-      const totalLabeled = approvedItems.reduce((total, item) => total + getLabeledTotal(item), 0);
+      const totalLabeled = inventarisItems.reduce((total, item) => total + getLabeledTotal(item), 0);
+      const inventarisReceived = inventarisItems.reduce((total, item) => total + getReceivedTotal(item), 0);
 
       const distinctYears = await ProcurementDraft.findAll({
         attributes: ['year'],
@@ -327,7 +330,7 @@ exports.getDashboard = async (req, res, next) => {
           approvedDrafts: approvedDrafts.length,
           approvedItems: totalApprovedItems,
           receivedItems: totalReceived,
-          pendingLabels: Math.max(totalReceived - totalLabeled, 0)
+          pendingLabels: Math.max(inventarisReceived - totalLabeled, 0)
         },
         adminDrafts: approvedDrafts.slice(0, 5).map(draft => {
           const items = draft.items || [];

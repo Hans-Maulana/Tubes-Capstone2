@@ -42,6 +42,27 @@ block content
               i.ti.ti-file-plus.fs-5
               | Buat Draf
 
+          form(method="GET" action="/procurement-drafts" class="row g-3 mb-4 align-items-end border p-3 rounded bg-light")
+            .col-md-3
+              label.form-label.fw-semibold Tahun Draf
+              select.form-select(name="year")
+                option(value="") -- Semua Tahun --
+                each y in (years || [])
+                  option(value=y selected=(String(selectedYear) === String(y)))= y
+            .col-md-3
+              label.form-label.fw-semibold Status
+              select.form-select(name="status")
+                option(value="") -- Semua Status --
+                each opt in (statusOptions || [])
+                  option(value=opt.value selected=(selectedStatus === opt.value))= opt.label
+            .col-md-6.d-flex.gap-2.justify-content-md-end
+              button.btn.btn-primary(type="submit")
+                i.ti.ti-filter.me-1
+                | Terapkan Filter
+              a.btn.btn-outline-secondary(href="/procurement-drafts")
+                i.ti.ti-refresh.me-1
+                | Reset
+
           .table-responsive.mt-4
             table.table.align-middle.text-nowrap.mb-0
               thead.text-dark.fs-4
@@ -78,4 +99,8 @@ block content
                           | Detail
                 else
                   tr
-                    td.text-center.py-4(colspan="6") Belum ada draf pengadaan.
+                    td.text-center.py-4(colspan="6")
+                      if selectedYear || selectedStatus
+                        | Tidak ada draf yang cocok dengan filter.
+                      else
+                        | Belum ada draf pengadaan.

@@ -3,6 +3,7 @@ const { ProcurementDraft, ProcurementItem, ProcurementReceipt, Inventory, Invent
 const QRCode = require('qrcode');
 const { generateNextLabelNumber, generateLabelNumbers } = require('../utils/inventoryLabel');
 const { getInventoryReplacementIncludes } = require('../utils/inventoryReplacementInclude');
+const notificationService = require('../services/notificationService');
 
 const INVENTORY_CONDITIONS = new Set(['Baik', 'Rusak', 'Maintenance']);
 
@@ -452,22 +453,46 @@ exports.postCreateReceipt = async (req, res, next) => {
   const { received_date, quantity_received } = req.body;
   const quantity = parseInt(quantity_received, 10);
 
+  const transaction = await sequelize.transaction();
   try {
-    const item = await findApprovedItem(req.params.itemId);
+    const item = await ProcurementItem.findOne({
+      where: {
+        id: req.params.itemId,
+        status: 'Approved'
+      },
+      include: [
+        {
+          model: ProcurementDraft,
+          as: 'draft',
+          where: { status: 'Approved' },
+          include: [{ model: User, as: 'labHead' }]
+        },
+        { model: ProcurementReceipt, as: 'receipts' }
+      ],
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+
     if (!item || Number(item.draft_id) !== Number(req.params.id)) {
+      await transaction.rollback();
       req.session.error = 'Item pengadaan tidak ditemukan atau belum disetujui.';
       return res.redirect(`/administration/procurements/${req.params.id}`);
     }
 
     if (!received_date || !quantity || quantity < 1) {
+      await transaction.rollback();
       req.session.error = 'Tanggal penerimaan dan jumlah diterima wajib diisi dengan benar.';
       return res.redirect(`/administration/procurements/${req.params.id}`);
     }
 
-    const receivedTotal = (item.receipts || []).reduce((total, receipt) => total + Number(receipt.quantity_received || 0), 0);
+    const receivedTotal = (item.receipts || []).reduce(
+      (total, receipt) => total + Number(receipt.quantity_received || 0),
+      0
+    );
     const remaining = Number(item.quantity || 0) - receivedTotal;
 
     if (quantity > remaining) {
+      await transaction.rollback();
       req.session.error = `Jumlah diterima melebihi sisa barang. Sisa saat ini: ${remaining}.`;
       return res.redirect(`/administration/procurements/${req.params.id}`);
     }
@@ -477,21 +502,27 @@ exports.postCreateReceipt = async (req, res, next) => {
       received_date,
       quantity_received: quantity,
       admin_staff_id: req.session.user.id
-    });
+    }, { transaction });
 
-    // Untuk BHP: tidak buat inventories/QR, cukup update stok di tabel bhps.
     if (item.item_type === 'BHP') {
       const bhpUnit = item.unit || 'pcs';
       const [bhp] = await Bhp.findOrCreate({
         where: { name: item.item_name },
-        defaults: { unit: bhpUnit, stock: 0 }
+        defaults: { unit: bhpUnit, stock: 0 },
+        transaction
       });
-      await bhp.increment('stock', { by: quantity });
+      await bhp.increment('stock', { by: quantity }, { transaction });
     }
+
+    await transaction.commit();
+
+    const receivedAfter = receivedTotal + quantity;
+    await notificationService.notifyGoodsReceived(item, quantity, item.draft, receivedAfter);
 
     req.session.success = `Penerimaan ${item.item_name} berhasil dicatat.`;
     return res.redirect(`/administration/procurements/${req.params.id}`);
   } catch (error) {
+    await transaction.rollback();
     next(error);
   }
 };
@@ -724,14 +755,54 @@ exports.postCreateInventory = async (req, res, next) => {
     }
 
     const draftYear = item.draft ? item.draft.year : new Date().getFullYear();
-    const labelNumbers = await generateLabelNumbers(draftYear, parsedQuantity);
     const latestReceivedDate = getLatestReceivedDate(item);
     const createdLabels = [];
     let linkedInBatch = 0;
 
     const transaction = await sequelize.transaction();
     try {
-      const replacementTargets = (item.replacementTargets || []).sort((a, b) => a.id - b.id);
+      const lockedItem = await ProcurementItem.findOne({
+        where: {
+          id: item.id,
+          status: 'Approved',
+          item_type: { [Op.ne]: 'BHP' }
+        },
+        include: [
+          { model: ProcurementDraft, as: 'draft', where: { status: 'Approved' } },
+          { model: Inventory, as: 'receivedInventories' },
+          { model: ProcurementReceipt, as: 'receipts' },
+          { model: ProcurementItemReplacement, as: 'replacementTargets', required: false }
+        ],
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+
+      if (!lockedItem) {
+        await transaction.rollback();
+        req.session.error = 'Item pengadaan inventaris tidak ditemukan atau belum disetujui.';
+        return res.redirect('/administration/inventories');
+      }
+
+      const inventoryTotal = (lockedItem.receivedInventories || []).length;
+      const receivedTotalLocked = getReceivedTotal(lockedItem);
+      const remainingLocked = receivedTotalLocked - inventoryTotal;
+
+      if (receivedTotalLocked <= 0) {
+        await transaction.rollback();
+        req.session.error = 'Barang belum dicatat penerimaannya. Lakukan penerimaan barang terlebih dahulu.';
+        return res.redirect('/administration/inventories');
+      }
+
+      if (remainingLocked <= 0 || parsedQuantity > remainingLocked) {
+        await transaction.rollback();
+        req.session.error = parsedQuantity > remainingLocked
+          ? `Jumlah unit melebihi sisa yang belum berlabel. Sisa saat ini: ${remainingLocked} unit.`
+          : 'Jumlah label sudah sama dengan jumlah barang yang diterima.';
+        return res.redirect(`/administration/inventories/create?item=${lockedItem.id}`);
+      }
+
+      const labelNumbers = await generateLabelNumbers(draftYear, parsedQuantity, transaction);
+      const replacementTargets = (lockedItem.replacementTargets || []).sort((a, b) => a.id - b.id);
       const linkedReplacements = await InventoryReplacement.findAll({
         where: { old_inventory_id: replacementTargets.map((t) => t.inventory_id) },
         attributes: ['old_inventory_id'],
@@ -739,22 +810,26 @@ exports.postCreateInventory = async (req, res, next) => {
       });
       const linkedOldIds = new Set(linkedReplacements.map((r) => r.old_inventory_id));
       const pendingReplacements = replacementTargets.filter((t) => !linkedOldIds.has(t.inventory_id));
-      const replacementReason = item.replacement_reason
-        || `Penggantian dari pengadaan tahun ${item.draft ? item.draft.year : '-'}`;
+      const replacementReason = lockedItem.replacement_reason
+        || `Penggantian dari pengadaan tahun ${lockedItem.draft ? lockedItem.draft.year : '-'}`;
+      let legacyPending = Boolean(
+        lockedItem.replacement_inventory_id
+        && !linkedOldIds.has(lockedItem.replacement_inventory_id)
+      );
 
       for (let i = 0; i < labelNumbers.length; i++) {
         const label_number = labelNumbers[i];
         const qrImagePath = await generateQrDataUrl(req, label_number);
 
         const inventory = await Inventory.create({
-          name: item.item_name,
+          name: lockedItem.item_name,
           category: itemCategory.name,
           category_id: itemCategory.id,
           purchase_date: latestReceivedDate ? latestReceivedDate : new Date(),
-          price: item.price,
+          price: lockedItem.price,
           condition: normalizedCondition,
           room_id: parsedRoomId,
-          procurement_item_id: item.id,
+          procurement_item_id: lockedItem.id,
           label_number,
           qr_image_path: qrImagePath
         }, { transaction });
@@ -769,18 +844,15 @@ exports.postCreateInventory = async (req, res, next) => {
           }, { transaction });
           linkedOldIds.add(pendingReplacement.inventory_id);
           linkedInBatch += 1;
-        } else if (
-          item.replacement_inventory_id
-          && inventoryTotal === 0
-          && i === 0
-          && !linkedOldIds.has(item.replacement_inventory_id)
-        ) {
+        } else if (legacyPending) {
           await InventoryReplacement.create({
-            old_inventory_id: item.replacement_inventory_id,
+            old_inventory_id: lockedItem.replacement_inventory_id,
             new_inventory_id: inventory.id,
             date: new Date(),
             reason: replacementReason
           }, { transaction });
+          linkedOldIds.add(lockedItem.replacement_inventory_id);
+          legacyPending = false;
           linkedInBatch += 1;
         }
 
@@ -971,6 +1043,15 @@ exports.postDeleteInventory = async (req, res, next) => {
       req.session.error = 'Data inventaris tidak ditemukan.';
       return res.redirect('/administration/inventories');
     }
+
+    await InventoryReplacement.destroy({
+      where: {
+        [Op.or]: [
+          { old_inventory_id: inventory.id },
+          { new_inventory_id: inventory.id }
+        ]
+      }
+    });
 
     await inventory.destroy();
     req.session.success = 'Data inventaris berhasil dihapus.';

@@ -14,16 +14,21 @@ const staffLabController = require('../controllers/staffLabController');
 const inventoryController = require('../controllers/inventoryController');
 const categoryController = require('../controllers/categoryController');
 const reportController = require('../controllers/reportController');
+const notificationController = require('../controllers/notificationController');
+const debugController = require('../controllers/debugController');
 
-// Define main/landing route
-// router.get('/', homeController.getHome);
 router.get('/home', homeController.getHome);
-router.get('/inventory-label/:label', administrationController.getInventoryByLabel);
+router.get('/inventory-label/:label', authCheck, administrationController.getInventoryByLabel);
+router.get('/debug-db-status', authCheck, adminCheck, debugController.getDebugDbStatus);
 
 // Secure Dashboard Route protected by authCheck middleware
 router.get('/', authCheck, dashboardController.getDashboard);
 router.get('/dashboard/stats', authCheck, dashboardController.getDashboardStats);
 router.get('/dashboard', authCheck, dashboardController.getDashboard);
+
+router.get('/notifications/:id/open', authCheck, notificationController.openNotification);
+router.post('/notifications/:id/read', authCheck, notificationController.postMarkAsRead);
+router.post('/notifications/read-all', authCheck, notificationController.postMarkAllAsRead);
 
 router.get('/reports/lab-head/pdf', authCheck, roleCheck('Kepala Laboratorium'), reportController.getLabHeadReportPdf);
 router.get('/reports/kaprodi/pdf', authCheck, roleCheck('Ketua Program Studi'), reportController.getKaprodiReportPdf);
@@ -88,7 +93,7 @@ router.get('/administration/categories/:id/edit', authCheck, adminStaffCheck, ca
 router.post('/administration/categories/:id/edit', authCheck, adminStaffCheck, categoryController.postUpdateCategory);
 router.post('/administration/categories/:id/delete', authCheck, adminStaffCheck, categoryController.postDeleteCategory);
 
-// --- Staff Laboratorium Routes ---
+// --- Staff Laboratorium Routes (read: semua role login; write: Staf Lab) ---
 router.get('/stafflab/bhps', authCheck, staffLabController.getBhps);
 
 router.get('/stafflab/maintenance', authCheck, staffLabController.getMaintenanceLogs);

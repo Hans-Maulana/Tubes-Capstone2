@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Role = require('../models/Role');
+const notificationService = require('../services/notificationService');
 
 /**
  * GET /users
@@ -81,12 +82,15 @@ exports.postCreateUser = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Create user
-    await User.create({
+    const newUser = await User.create({
       name,
       email,
       password: hashedPassword,
       role_id
     });
+
+    const role = roles.find((r) => String(r.id) === String(role_id));
+    await notificationService.notifyUserCreated(newUser, role ? role.name : 'Pengguna', req.session.user.id);
 
     req.session.success = 'Pengguna baru berhasil ditambahkan!';
     return res.redirect('/users');
@@ -171,6 +175,16 @@ exports.postUpdateUser = async (req, res, next) => {
     }
 
     await userToEdit.update(updateData);
+
+    if (req.session.user && parseInt(id, 10) === req.session.user.id) {
+      const role = roles.find((r) => String(r.id) === String(role_id));
+      req.session.user = {
+        ...req.session.user,
+        name,
+        email,
+        role: role ? role.name : req.session.user.role
+      };
+    }
 
     req.session.success = 'Data pengguna berhasil diubah!';
     return res.redirect('/users');

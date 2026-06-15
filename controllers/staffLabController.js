@@ -12,8 +12,11 @@ const {
   Role,
   sequelize
 } = require('../models');
+const notificationService = require('../services/notificationService');
+const { findStaffLabManagedInventory } = require('../utils/inventoryAccess');
 
 const INVENTORY_CONDITIONS = ['Baik', 'Rusak', 'Maintenance'];
+const STAFF_DIRECT_STATUS = ['Baik', 'Rusak'];
 
 async function findLabeledInventories({ room_id, year, label, category_id, q, condition } = {}) {
   const inventoryWhere = {};
@@ -295,9 +298,9 @@ exports.getInventoryLookup = async (req, res, next) => {
 
 exports.postStartMaintenance = async (req, res, next) => {
   try {
-    const inventory = await Inventory.findByPk(req.params.id);
+    const inventory = await findStaffLabManagedInventory(req.params.id);
     if (!inventory) {
-      req.session.error = 'Data inventaris tidak ditemukan.';
+      req.session.error = 'Data inventaris tidak ditemukan atau tidak dapat dikelola.';
       return res.redirect('/stafflab/inventories');
     }
 
@@ -317,12 +320,9 @@ exports.postStartMaintenance = async (req, res, next) => {
 
 exports.getMoveRoom = async (req, res, next) => {
   try {
-    const inventory = await Inventory.findByPk(req.params.id, {
-      include: [{ model: Room, as: 'room' }]
-    });
-
+    const inventory = await findStaffLabManagedInventory(req.params.id);
     if (!inventory) {
-      req.session.error = 'Data inventaris tidak ditemukan.';
+      req.session.error = 'Data inventaris tidak ditemukan atau tidak dapat dikelola.';
       return res.redirect('/stafflab/inventories');
     }
 
@@ -330,7 +330,7 @@ exports.getMoveRoom = async (req, res, next) => {
 
     res.render('stafflab/inventories/move-room', {
       title: 'Pindah Ruangan - Sistem Inventaris Laboratorium',
-      inventory,
+      inventory: await Inventory.findByPk(req.params.id, { include: [{ model: Room, as: 'room' }] }),
       rooms,
       error: null
     });
@@ -343,9 +343,9 @@ exports.postMoveRoom = async (req, res, next) => {
   const { room_id } = req.body;
 
   try {
-    const inventory = await Inventory.findByPk(req.params.id);
+    const inventory = await findStaffLabManagedInventory(req.params.id);
     if (!inventory) {
-      req.session.error = 'Data inventaris tidak ditemukan.';
+      req.session.error = 'Data inventaris tidak ditemukan atau tidak dapat dikelola.';
       return res.redirect('/stafflab/inventories');
     }
 
@@ -382,16 +382,17 @@ exports.postMoveRoom = async (req, res, next) => {
 
 exports.getCompleteMaintenance = async (req, res, next) => {
   try {
-    const inventory = await Inventory.findByPk(req.params.id, {
-      include: [{ model: Room, as: 'room' }]
-    });
-
+    const inventory = await findStaffLabManagedInventory(req.params.id);
     if (!inventory) {
-      req.session.error = 'Data inventaris tidak ditemukan.';
+      req.session.error = 'Data inventaris tidak ditemukan atau tidak dapat dikelola.';
       return res.redirect('/stafflab/inventories');
     }
 
-    if (inventory.condition !== 'Maintenance') {
+    const inventoryView = await Inventory.findByPk(req.params.id, {
+      include: [{ model: Room, as: 'room' }]
+    });
+
+    if (inventoryView.condition !== 'Maintenance') {
       req.session.error = `"${inventory.label_number}" tidak dalam status Maintenance. Mulai maintenance terlebih dahulu.`;
       return res.redirect('/stafflab/inventories');
     }
@@ -400,7 +401,7 @@ exports.getCompleteMaintenance = async (req, res, next) => {
 
     res.render('stafflab/inventories/complete-maintenance', {
       title: 'Selesaikan Maintenance - Sistem Inventaris Laboratorium',
-      inventory,
+      inventory: inventoryView,
       bhps,
       conditions: INVENTORY_CONDITIONS.filter((c) => c !== 'Maintenance'),
       error: null,
@@ -418,11 +419,15 @@ exports.postCompleteMaintenance = async (req, res, next) => {
   const { description, date, condition } = req.body;
 
   try {
-    const inventory = await Inventory.findByPk(req.params.id);
+    const inventory = await findStaffLabManagedInventory(req.params.id);
     if (!inventory) {
-      req.session.error = 'Data inventaris tidak ditemukan.';
+      req.session.error = 'Data inventaris tidak ditemukan atau tidak dapat dikelola.';
       return res.redirect('/stafflab/inventories');
     }
+
+    const inventoryView = await Inventory.findByPk(req.params.id, {
+      include: [{ model: Room, as: 'room' }]
+    });
 
     const bhps = await Bhp.findAll({ order: [['name', 'ASC']] });
     const allowedConditions = INVENTORY_CONDITIONS.filter((c) => c !== 'Maintenance');
@@ -450,7 +455,7 @@ exports.postCompleteMaintenance = async (req, res, next) => {
 
     const renderForm = (error) => res.render('stafflab/inventories/complete-maintenance', {
       title: 'Selesaikan Maintenance - Sistem Inventaris Laboratorium',
-      inventory,
+      inventory: inventoryView,
       bhps,
       conditions: allowedConditions,
       error,
@@ -469,8 +474,8 @@ exports.postCompleteMaintenance = async (req, res, next) => {
       }
     });
 
-    if (inventory.condition !== 'Maintenance') {
-      req.session.error = `"${inventory.label_number}" tidak dalam status Maintenance.`;
+    if (inventoryView.condition !== 'Maintenance') {
+      req.session.error = `"${inventoryView.label_number}" tidak dalam status Maintenance.`;
       return res.redirect('/stafflab/inventories');
     }
 
@@ -497,26 +502,22 @@ exports.postCompleteMaintenance = async (req, res, next) => {
 
     const finalBhpInputs = Object.values(consolidated);
 
-    // Pre-validate stock availability
-    for (const item of finalBhpInputs) {
-      const bhpObj = await Bhp.findByPk(item.bhp_id);
-      if (!bhpObj) {
-        return renderForm('BHP yang dipilih tidak ditemukan.');
-      }
-      if (bhpObj.stock < item.quantity) {
-        return renderForm(`Stok BHP "${bhpObj.name}" tidak mencukupi. Stok saat ini: ${bhpObj.stock} ${bhpObj.unit}.`);
-      }
-    }
-
     const transaction = await sequelize.transaction();
     try {
-      // 1. Decrement stock for all used BHPs
       for (const item of finalBhpInputs) {
-        const bhpObj = await Bhp.findByPk(item.bhp_id, { transaction });
+        const bhpObj = await Bhp.findByPk(item.bhp_id, {
+          transaction,
+          lock: transaction.LOCK.UPDATE
+        });
+        if (!bhpObj) {
+          throw new Error('BHP yang dipilih tidak ditemukan.');
+        }
+        if (bhpObj.stock < item.quantity) {
+          throw new Error(`Stok BHP "${bhpObj.name}" tidak mencukupi. Stok saat ini: ${bhpObj.stock} ${bhpObj.unit}.`);
+        }
         await bhpObj.decrement('stock', { by: item.quantity, transaction });
       }
 
-      // 2. Update inventory condition
       await inventory.update({ condition }, { transaction });
 
       // 3. Create MaintenanceLog (fallback first BHP to legacy columns)
@@ -542,10 +543,23 @@ exports.postCompleteMaintenance = async (req, res, next) => {
 
       await transaction.commit();
 
+      await notificationService.notifyMaintenanceCompleted(
+        log,
+        inventory,
+        req.session.user.name
+      );
+
+      if (condition === 'Rusak') {
+        await notificationService.notifyInventoryDamaged(inventory);
+      }
+
       req.session.success = `Maintenance "${inventory.label_number}" selesai. Kondisi akhir: ${condition}. Log tersimpan di riwayat maintenance.`;
       return res.redirect('/stafflab/maintenance');
     } catch (writeError) {
       await transaction.rollback();
+      if (writeError.message && !writeError.message.includes('Sequelize')) {
+        return renderForm(writeError.message);
+      }
       throw writeError;
     }
   } catch (error) {
@@ -564,19 +578,20 @@ exports.postUpdateInventory = async (req, res, next) => {
 
 exports.getChangeStatus = async (req, res, next) => {
   try {
-    const inventory = await Inventory.findByPk(req.params.id, {
-      include: [{ model: Room, as: 'room' }]
-    });
-
+    const inventory = await findStaffLabManagedInventory(req.params.id);
     if (!inventory) {
-      req.session.error = 'Data inventaris tidak ditemukan.';
+      req.session.error = 'Data inventaris tidak ditemukan atau tidak dapat dikelola.';
       return res.redirect('/stafflab/inventories');
     }
 
+    const inventoryView = await Inventory.findByPk(req.params.id, {
+      include: [{ model: Room, as: 'room' }]
+    });
+
     res.render('stafflab/inventories/change-status', {
       title: 'Ubah Status Inventaris - Sistem Inventaris Laboratorium',
-      inventory,
-      conditions: INVENTORY_CONDITIONS,
+      inventory: inventoryView,
+      conditions: STAFF_DIRECT_STATUS,
       error: null
     });
   } catch (error) {
@@ -588,22 +603,37 @@ exports.postChangeStatus = async (req, res, next) => {
   const { condition } = req.body;
 
   try {
-    const inventory = await Inventory.findByPk(req.params.id);
+    const inventory = await findStaffLabManagedInventory(req.params.id);
     if (!inventory) {
-      req.session.error = 'Data inventaris tidak ditemukan.';
+      req.session.error = 'Data inventaris tidak ditemukan atau tidak dapat dikelola.';
       return res.redirect('/stafflab/inventories');
     }
 
-    if (!condition || !INVENTORY_CONDITIONS.includes(condition)) {
+    const inventoryView = await Inventory.findByPk(req.params.id, {
+      include: [{ model: Room, as: 'room' }]
+    });
+
+    if (!condition || !STAFF_DIRECT_STATUS.includes(condition)) {
       return res.render('stafflab/inventories/change-status', {
         title: 'Ubah Status Inventaris - Sistem Inventaris Laboratorium',
-        inventory: { ...inventory.toJSON(), condition },
-        conditions: INVENTORY_CONDITIONS,
-        error: 'Kondisi inventaris tidak valid.'
+        inventory: { ...inventoryView.toJSON(), condition },
+        conditions: STAFF_DIRECT_STATUS,
+        error: condition === 'Maintenance'
+          ? 'Gunakan aksi "Mulai Maintenance" untuk menandai inventaris sedang diperbaiki.'
+          : 'Kondisi inventaris tidak valid.'
       });
     }
 
     await inventory.update({ condition });
+
+    if (condition === 'Rusak') {
+      await notificationService.notifyInventoryDamaged(inventory);
+    } else {
+      await notificationService.clearQueueByRefKey(
+        `queue:damaged:inv:${inventory.id}`,
+        'Kepala Laboratorium'
+      );
+    }
 
     req.session.success = `Status "${inventory.label_number}" diperbarui menjadi "${condition}".`;
     return res.redirect('/stafflab/inventories');

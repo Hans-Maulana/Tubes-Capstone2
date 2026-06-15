@@ -2,23 +2,17 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Role = require('../models/Role');
 
-/**
- * Show the login form
- */
 exports.getLogin = (req, res) => {
-  // If user is already logged in, redirect to dashboard
   if (req.session && req.session.user) {
     return res.redirect('/dashboard');
   }
   return res.render('auth/login', {
     title: 'Login - Sistem Inventaris Laboratorium',
-    error: null
+    error: null,
+    csrfToken: res.locals.csrfToken
   });
 };
 
-/**
- * Handle login form submission
- */
 exports.postLogin = async (req, res, next) => {
   const { email, password } = req.body;
 
@@ -26,12 +20,12 @@ exports.postLogin = async (req, res, next) => {
     if (!email || !password) {
       return res.render('auth/login', {
         title: 'Login - Sistem Inventaris Laboratorium',
-        error: 'Email dan password wajib diisi.'
+        error: 'Email dan password wajib diisi.',
+        csrfToken: res.locals.csrfToken
       });
     }
 
-    // Find user by email and eager load Role
-    const user = await User.findOne({ 
+    const user = await User.findOne({
       where: { email },
       include: [{ model: Role, as: 'role' }]
     });
@@ -39,47 +33,61 @@ exports.postLogin = async (req, res, next) => {
     if (!user) {
       return res.render('auth/login', {
         title: 'Login - Sistem Inventaris Laboratorium',
-        error: 'Email atau password salah.'
+        error: 'Email atau password salah.',
+        csrfToken: res.locals.csrfToken
       });
     }
 
-    // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
-
     if (!isMatch) {
       return res.render('auth/login', {
         title: 'Login - Sistem Inventaris Laboratorium',
-        error: 'Email atau password salah.'
+        error: 'Email atau password salah.',
+        csrfToken: res.locals.csrfToken
       });
     }
 
-    // Set user session data (extracting role name from associated model)
-    req.session.user = {
+    const sessionUser = {
       id: user.id,
       name: user.name,
-      role: user.role ? user.role.name : 'Unknown', // Tetap dilempar sebagai string untuk kompatibilitas Pug view
+      role: user.role ? user.role.name : 'Unknown',
       email: user.email
     };
 
-    // Redirect to dashboard
-    return res.redirect('/dashboard');
+    req.session.regenerate((regenerateErr) => {
+      if (regenerateErr) {
+        return next(regenerateErr);
+      }
+      req.session.user = sessionUser;
+      return req.session.save((saveErr) => {
+        if (saveErr) return next(saveErr);
+        return res.redirect('/dashboard');
+      });
+    });
   } catch (error) {
     console.error('[Login Error]:', error);
     return res.render('auth/login', {
       title: 'Login - Sistem Inventaris Laboratorium',
-      error: 'Terjadi kesalahan sistem. Silakan coba beberapa saat lagi.'
+      error: 'Terjadi kesalahan sistem. Silakan coba beberapa saat lagi.',
+      csrfToken: res.locals.csrfToken
     });
   }
 };
 
-/**
- * Handle logout
- */
-exports.logout = (req, res) => {
+exports.postLogout = (req, res, next) => {
   req.session.destroy((err) => {
     if (err) {
       console.error('[Logout Error]:', err);
+      return next(err);
     }
+    res.clearCookie('connect.sid');
     return res.redirect('/auth/login');
+  });
+};
+
+exports.logout = (req, res) => {
+  res.status(405).render('auth/unauthorized', {
+    title: '405 Method Not Allowed',
+    message: 'Logout harus menggunakan metode POST.'
   });
 };

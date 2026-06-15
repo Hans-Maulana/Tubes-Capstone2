@@ -58,6 +58,7 @@ html(lang="en")
                 span.small= error
             
             form(action="/auth/login" method="POST")
+              input(type="hidden" name="_csrf" value=csrfToken || '')
               .mb-3
                 label.form-label(for="email") Alamat Email
                 input#email.form-control(type="email" name="email" placeholder="nama@email.com" required)

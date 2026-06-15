@@ -1,4 +1,10 @@
+const { Op } = require('sequelize');
 const Room = require('../models/Room');
+
+function normalizeRoomCode(code) {
+  if (!code || !String(code).trim()) return null;
+  return String(code).trim().toUpperCase();
+}
 
 /**
  * GET /rooms
@@ -42,21 +48,40 @@ exports.getCreateRoom = (req, res) => {
  * Store new room in database
  */
 exports.postCreateRoom = async (req, res, next) => {
-  const { name, location, description } = req.body;
+  const { name, code, location, description } = req.body;
+  const normalizedCode = normalizeRoomCode(code);
 
   try {
     if (!name) {
       return res.render('rooms/create', {
         title: 'Tambah Ruangan - Sistem Inventaris Laboratorium',
         error: 'Nama ruangan wajib diisi.',
-        formData: { name, location, description }
+        formData: { name, code, location, description }
+      });
+    }
+
+    if (!normalizedCode) {
+      return res.render('rooms/create', {
+        title: 'Tambah Ruangan - Sistem Inventaris Laboratorium',
+        error: 'Kode ruangan wajib diisi.',
+        formData: { name, code, location, description }
+      });
+    }
+
+    const existingCode = await Room.findOne({ where: { code: normalizedCode } });
+    if (existingCode) {
+      return res.render('rooms/create', {
+        title: 'Tambah Ruangan - Sistem Inventaris Laboratorium',
+        error: `Kode ruangan "${normalizedCode}" sudah digunakan.`,
+        formData: { name, code, location, description }
       });
     }
 
     await Room.create({
-      name,
-      location,
-      description
+      name: name.trim(),
+      code: normalizedCode,
+      location: location ? location.trim() : null,
+      description: description ? description.trim() : null
     });
 
     req.session.success = 'Ruangan baru berhasil ditambahkan!';
@@ -97,7 +122,8 @@ exports.getEditRoom = async (req, res, next) => {
  */
 exports.postUpdateRoom = async (req, res, next) => {
   const { id } = req.params;
-  const { name, location, description } = req.body;
+  const { name, code, location, description } = req.body;
+  const normalizedCode = normalizeRoomCode(code);
 
   try {
     const roomToEdit = await Room.findByPk(id);
@@ -109,15 +135,38 @@ exports.postUpdateRoom = async (req, res, next) => {
     if (!name) {
       return res.render('rooms/edit', {
         title: 'Ubah Ruangan - Sistem Inventaris Laboratorium',
-        roomToEdit: { id, name, location, description },
+        roomToEdit: { id, name, code, location, description },
         error: 'Nama ruangan wajib diisi.'
       });
     }
 
+    if (!normalizedCode) {
+      return res.render('rooms/edit', {
+        title: 'Ubah Ruangan - Sistem Inventaris Laboratorium',
+        roomToEdit: { id, name, code, location, description },
+        error: 'Kode ruangan wajib diisi.'
+      });
+    }
+
+    const existingCode = await Room.findOne({
+      where: {
+        code: normalizedCode,
+        id: { [Op.ne]: id }
+      }
+    });
+    if (existingCode) {
+      return res.render('rooms/edit', {
+        title: 'Ubah Ruangan - Sistem Inventaris Laboratorium',
+        roomToEdit: { id, name, code, location, description },
+        error: `Kode ruangan "${normalizedCode}" sudah digunakan.`
+      });
+    }
+
     await roomToEdit.update({
-      name,
-      location,
-      description
+      name: name.trim(),
+      code: normalizedCode,
+      location: location ? location.trim() : null,
+      description: description ? description.trim() : null
     });
 
     req.session.success = 'Data ruangan berhasil diubah!';

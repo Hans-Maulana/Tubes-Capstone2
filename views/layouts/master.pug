@@ -3,6 +3,8 @@ html(lang="en")
   head
     meta(charset="utf-8")
     meta(name="viewport" content="width=device-width, initial-scale=1")
+    if csrfToken
+      meta(name="csrf-token" content=csrfToken)
     title= title || 'Sistem Inventaris Laboratorium'
     link(rel="shortcut icon" type="image/png" href="/assets/images/logos/favicon.png")
     link(rel="stylesheet" href="/assets/css/styles.min.css")
@@ -691,6 +693,33 @@ html(lang="en")
     script(src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js")
     
     script.
+      (function () {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!csrfToken) return;
+
+        document.querySelectorAll('form[method="post"], form[method="POST"]').forEach(function (form) {
+          if (form.querySelector('input[name="_csrf"]')) return;
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = '_csrf';
+          input.value = csrfToken;
+          form.appendChild(input);
+        });
+
+        const originalFetch = window.fetch;
+        window.fetch = function (input, init) {
+          init = init || {};
+          const method = (init.method || 'GET').toUpperCase();
+          if (method !== 'GET' && method !== 'HEAD') {
+            init.headers = new Headers(init.headers || {});
+            if (!init.headers.has('X-CSRF-Token')) {
+              init.headers.set('X-CSRF-Token', csrfToken);
+            }
+          }
+          return originalFetch.call(this, input, init);
+        };
+      })();
+
       // Automatically highlight active sidebar menu items based on URL
       $(document).ready(function() {
         const currentUrl = window.location.pathname;

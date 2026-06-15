@@ -6,6 +6,8 @@ const Inventory = require('../models/Inventory');
 const ItemCategory = require('../models/ItemCategory');
 const User = require('../models/User');
 const { sequelize } = require('../models');
+const notificationService = require('../services/notificationService');
+const { getDamagedInventoriesForReplacement } = require('../utils/inventoryAccess');
 
 function isLocked(draft) {
   return draft && ['Locked', 'Approved', 'Rejected'].includes(draft.status);
@@ -37,35 +39,6 @@ async function findOwnedDraft(id, userId) {
       }
     ],
     order: [[{ model: ProcurementItem, as: 'items' }, 'id', 'ASC']]
-  });
-}
-
-async function getDamagedInventories() {
-  return Inventory.findAll({
-    where: {
-      condition: 'Rusak'
-    },
-    include: [
-      { model: ItemCategory, as: 'itemCategory', required: false },
-      {
-        model: ProcurementItem,
-        as: 'procurementItem',
-        required: true,
-        where: {
-          item_type: { [Op.ne]: 'BHP' },
-          status: 'Approved'
-        },
-        include: [
-          {
-            model: ProcurementDraft,
-            as: 'draft',
-            required: true,
-            where: { status: 'Approved' }
-          }
-        ]
-      }
-    ],
-    order: [['label_number', 'ASC']]
   });
 }
 
@@ -163,6 +136,26 @@ async function syncItemReplacements(item, inventoryIds, reason) {
     if (inventories.length !== uniqueIds.length) {
       return { error: 'Salah satu inventaris pengganti tidak valid atau bukan status Rusak.' };
     }
+
+    const conflicts = await ProcurementItemReplacement.findAll({
+      where: { inventory_id: uniqueIds },
+      include: [{
+        model: ProcurementItem,
+        as: 'procurementItem',
+        required: true,
+        where: { id: { [Op.ne]: item.id } },
+        include: [{
+          model: ProcurementDraft,
+          as: 'draft',
+          required: true,
+          where: { status: { [Op.in]: ['Draft', 'Submitted', 'Locked'] } }
+        }]
+      }]
+    });
+
+    if (conflicts.length > 0) {
+      return { error: 'Salah satu inventaris sudah dipakai di draf penggantian lain yang masih aktif.' };
+    }
   }
 
   const transaction = await sequelize.transaction();
@@ -197,8 +190,22 @@ async function syncItemReplacements(item, inventoryIds, reason) {
 
 exports.getDrafts = async (req, res, next) => {
   try {
+    const { year, status } = req.query;
+    const where = { lab_head_id: req.session.user.id };
+
+    if (year && String(year).trim()) {
+      const parsedYear = parseInt(year, 10);
+      if (!Number.isNaN(parsedYear)) {
+        where.year = parsedYear;
+      }
+    }
+
+    if (status && String(status).trim()) {
+      where.status = String(status).trim();
+    }
+
     const drafts = await ProcurementDraft.findAll({
-      where: { lab_head_id: req.session.user.id },
+      where,
       include: [
         { model: User, as: 'labHead' },
         { model: ProcurementItem, as: 'items' }
@@ -206,9 +213,29 @@ exports.getDrafts = async (req, res, next) => {
       order: [['year', 'DESC'], ['id', 'DESC']]
     });
 
+    const yearRows = await ProcurementDraft.findAll({
+      where: { lab_head_id: req.session.user.id },
+      attributes: ['year'],
+      group: ['year'],
+      order: [['year', 'DESC']]
+    });
+    const years = yearRows.map((row) => row.year);
+
+    const statusOptions = [
+      { value: 'Draft', label: 'Draft' },
+      { value: 'Submitted', label: 'Diajukan' },
+      { value: 'Locked', label: 'Menunggu Finalisasi' },
+      { value: 'Approved', label: 'Disetujui' },
+      { value: 'Rejected', label: 'Ditolak' }
+    ];
+
     res.render('procurement-drafts/index', {
       title: 'Draf Pengadaan - Sistem Inventaris Laboratorium',
       drafts,
+      years,
+      statusOptions,
+      selectedYear: year || '',
+      selectedStatus: status || '',
       success: req.session.success || null,
       error: req.session.error || null
     });
@@ -243,6 +270,23 @@ exports.postCreateDraft = async (req, res, next) => {
       });
     }
 
+    const existingDraft = await ProcurementDraft.findOne({
+      where: {
+        lab_head_id: req.session.user.id,
+        year: selectedYear,
+        status: { [Op.in]: ['Draft', 'Submitted', 'Locked'] }
+      }
+    });
+
+    if (existingDraft) {
+      return res.render('procurement-drafts/create', {
+        title: 'Buat Draf Pengadaan - Sistem Inventaris Laboratorium',
+        currentYear: new Date().getFullYear(),
+        error: `Draf pengadaan tahun ${selectedYear} sudah ada dan masih aktif.`,
+        formData: { year }
+      });
+    }
+
     const draft = await ProcurementDraft.create({
       lab_head_id: req.session.user.id,
       year: selectedYear,
@@ -264,7 +308,7 @@ exports.getDraftDetail = async (req, res, next) => {
       return res.redirect('/procurement-drafts');
     }
 
-    const damagedInventories = await getDamagedInventories();
+    const damagedInventories = await getDamagedInventoriesForReplacement();
 
     return res.render('procurement-drafts/detail', {
       title: `Draf Pengadaan ${draft.year} - Sistem Inventaris Laboratorium`,
@@ -385,7 +429,7 @@ exports.getEditItem = async (req, res, next) => {
       return res.redirect(`/procurement-drafts/${draft.id}`);
     }
 
-    const damagedInventories = await getDamagedInventories();
+    const damagedInventories = await getDamagedInventoriesForReplacement();
 
     return res.render('procurement-drafts/edit-item', {
       title: 'Ubah Item Pengadaan - Sistem Inventaris Laboratorium',
@@ -435,7 +479,7 @@ exports.postUpdateItem = async (req, res, next) => {
     }
 
     if (!item_type || !item_name || !quantity || !price) {
-      const damagedInventories = await getDamagedInventories();
+      const damagedInventories = await getDamagedInventoriesForReplacement();
 
       return res.render('procurement-drafts/edit-item', {
         title: 'Ubah Item Pengadaan - Sistem Inventaris Laboratorium',
@@ -456,7 +500,7 @@ exports.postUpdateItem = async (req, res, next) => {
     }
 
     if (item_type === 'Inventaris' && replacementIds.length > 0 && replacementIds.length > parseInt(quantity, 10)) {
-      const damagedInventories = await getDamagedInventories();
+      const damagedInventories = await getDamagedInventoriesForReplacement();
       return res.render('procurement-drafts/edit-item', {
         title: 'Ubah Item Pengadaan - Sistem Inventaris Laboratorium',
         draft,
@@ -477,7 +521,7 @@ exports.postUpdateItem = async (req, res, next) => {
 
     const syncResult = await syncItemReplacements(item, replacementIds, replacement_reason);
     if (syncResult.error) {
-      const damagedInventories = await getDamagedInventories();
+      const damagedInventories = await getDamagedInventoriesForReplacement();
       return res.render('procurement-drafts/edit-item', {
         title: 'Ubah Item Pengadaan - Sistem Inventaris Laboratorium',
         draft,
@@ -549,12 +593,21 @@ exports.postSubmitDraft = async (req, res, next) => {
       return res.redirect(`/procurement-drafts/${draft.id}`);
     }
 
+    if (draft.status !== 'Draft') {
+      req.session.error = 'Draf sudah diajukan sebelumnya.';
+      return res.redirect(`/procurement-drafts/${draft.id}`);
+    }
+
     if (!draft.items || draft.items.length === 0) {
       req.session.error = 'Tambahkan minimal satu item sebelum mengajukan draf.';
       return res.redirect(`/procurement-drafts/${draft.id}`);
     }
 
     await draft.update({ status: 'Submitted' });
+    const submittedDraft = await ProcurementDraft.findByPk(draft.id, {
+      include: [{ model: User, as: 'labHead' }]
+    });
+    await notificationService.notifyDraftSubmitted(submittedDraft);
     req.session.success = 'Draf pengadaan berhasil diajukan.';
     return res.redirect(`/procurement-drafts/${draft.id}`);
   } catch (error) {
@@ -570,12 +623,26 @@ exports.postLockDraft = async (req, res, next) => {
       return res.redirect('/procurement-drafts');
     }
 
+    if (isLocked(draft)) {
+      req.session.error = 'Draf sudah terkunci atau difinalisasi.';
+      return res.redirect(`/procurement-drafts/${draft.id}`);
+    }
+
+    if (draft.status !== 'Submitted') {
+      req.session.error = 'Ajukan draf terlebih dahulu sebelum pengajuan finalisasi.';
+      return res.redirect(`/procurement-drafts/${draft.id}`);
+    }
+
     if (!draft.items || draft.items.length === 0) {
       req.session.error = 'Tambahkan minimal satu item sebelum mengajukan finalisasi draf.';
       return res.redirect(`/procurement-drafts/${draft.id}`);
     }
 
     await draft.update({ status: 'Locked' });
+    const lockedDraft = await ProcurementDraft.findByPk(draft.id, {
+      include: [{ model: User, as: 'labHead' }]
+    });
+    await notificationService.notifyDraftLocked(lockedDraft);
     req.session.success = 'Pengajuan finalisasi draf pengadaan berhasil dikirim.';
     return res.redirect(`/procurement-drafts/${draft.id}`);
   } catch (error) {
@@ -686,6 +753,11 @@ exports.postApproveItem = async (req, res, next) => {
       return res.redirect(`/procurement-drafts-history/${draft.id}`);
     }
 
+    if (item.status === 'Approved') {
+      req.session.error = `Item "${item.item_name}" sudah disetujui sebelumnya.`;
+      return res.redirect(`/procurement-drafts-history/${draft.id}`);
+    }
+
     await item.update({ status: 'Approved' });
     req.session.success = `Item "${item.item_name}" disetujui.`;
     return res.redirect(`/procurement-drafts-history/${draft.id}`);
@@ -722,7 +794,13 @@ exports.postRejectItem = async (req, res, next) => {
       return res.redirect(`/procurement-drafts-history/${draft.id}`);
     }
 
+    if (item.status === 'Rejected') {
+      req.session.error = `Item "${item.item_name}" sudah ditolak sebelumnya.`;
+      return res.redirect(`/procurement-drafts-history/${draft.id}`);
+    }
+
     await item.update({ status: 'Rejected' });
+    await notificationService.notifyItemRejected(draft, item);
     req.session.success = `Item "${item.item_name}" ditolak.`;
     return res.redirect(`/procurement-drafts-history/${draft.id}`);
   } catch (error) {
@@ -758,7 +836,14 @@ exports.postFinalizeDraft = async (req, res, next) => {
       return res.redirect(`/procurement-drafts-history/${draft.id}`);
     }
 
+    const approvedCount = draft.items.filter((item) => item.status === 'Approved').length;
+    if (decision === 'Approved' && approvedCount === 0) {
+      req.session.error = 'Tidak dapat menyetujui draf jika semua item ditolak.';
+      return res.redirect(`/procurement-drafts-history/${draft.id}`);
+    }
+
     await draft.update({ status: decision });
+    await notificationService.notifyDraftFinalized(draft, decision);
     req.session.success = `Draf pengadaan tahun ${draft.year} telah berhasil difinalisasi dengan status: ${decision === 'Approved' ? 'Disetujui' : 'Ditolak'}.`;
     return res.redirect(`/procurement-drafts-history/${draft.id}`);
   } catch (error) {

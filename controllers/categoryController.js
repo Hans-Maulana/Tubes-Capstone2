@@ -42,7 +42,7 @@ exports.postCreateCategory = async (req, res, next) => {
     }
 
     const existing = await ItemCategory.findOne({
-      where: { name: { [Op.like]: name.trim() } }
+      where: { name: name.trim() }
     });
 
     if (existing) {
@@ -103,7 +103,7 @@ exports.postUpdateCategory = async (req, res, next) => {
 
     const existing = await ItemCategory.findOne({
       where: {
-        name: { [Op.like]: name.trim() },
+        name: name.trim(),
         id: { [Op.ne]: category.id }
       }
     });
