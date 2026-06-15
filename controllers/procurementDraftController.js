@@ -652,12 +652,24 @@ exports.postLockDraft = async (req, res, next) => {
 
 exports.getReviewDrafts = async (req, res, next) => {
   try {
+    const { year, status } = req.query;
+    const reviewStatuses = ['Submitted', 'Locked', 'Approved', 'Rejected'];
+
+    const where = {
+      status: status && String(status).trim()
+        ? String(status).trim()
+        : { [Op.in]: reviewStatuses }
+    };
+
+    if (year && String(year).trim()) {
+      const parsedYear = parseInt(year, 10);
+      if (!Number.isNaN(parsedYear)) {
+        where.year = parsedYear;
+      }
+    }
+
     const drafts = await ProcurementDraft.findAll({
-      where: {
-        status: {
-          [Op.in]: ['Submitted', 'Locked', 'Approved', 'Rejected']
-        }
-      },
+      where,
       include: [
         { model: User, as: 'labHead' },
         { model: ProcurementItem, as: 'items' }
@@ -665,9 +677,28 @@ exports.getReviewDrafts = async (req, res, next) => {
       order: [['year', 'DESC'], ['id', 'DESC']]
     });
 
+    const yearRows = await ProcurementDraft.findAll({
+      where: { status: { [Op.in]: reviewStatuses } },
+      attributes: ['year'],
+      group: ['year'],
+      order: [['year', 'DESC']]
+    });
+    const years = yearRows.map((row) => row.year);
+
+    const statusOptions = [
+      { value: 'Submitted', label: 'Menunggu Pengajuan Finalisasi' },
+      { value: 'Locked', label: 'Menunggu Review' },
+      { value: 'Approved', label: 'Disetujui' },
+      { value: 'Rejected', label: 'Ditolak' }
+    ];
+
     res.render('procurement-drafts/review-index', {
       title: 'Review Pengadaan - Sistem Inventaris Laboratorium',
       drafts,
+      years,
+      statusOptions,
+      selectedYear: year || '',
+      selectedStatus: status || '',
       success: req.session.success || null,
       error: req.session.error || null
     });
